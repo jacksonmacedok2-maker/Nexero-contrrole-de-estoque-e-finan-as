@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle, User, Phone, Building, Search, ArrowLeft, Landmark, ShieldCheck, Loader2, Sparkles, Inbox, RefreshCcw, ExternalLink } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle, User, Phone, Building, Search, ArrowLeft, Landmark, ShieldCheck, Loader2, Sparkles, Inbox, RefreshCcw, ExternalLink, HelpCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
 import { fetchCnpjData } from '../utils/helpers';
 import { supabase } from '../services/supabase';
 
 const Login: React.FC = () => {
-  const { login, signUp, isVerifying, setIsVerifying } = useAuth();
+  const { login, signUp, isVerifying, setIsVerifying, refreshSession } = useAuth();
   
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,24 +76,45 @@ const Login: React.FC = () => {
       await signUp(signupData.email, signupData.password, metadata);
       setResendTimer(60);
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar conta. Tente novamente mais tarde.');
+      if (err.message?.includes('rate limit')) {
+        setError('Muitas tentativas. O Supabase limita o envio de e-mails para 3 por hora no plano gratuito.');
+      } else {
+        setError(err.message || 'Erro ao criar conta. Tente novamente mais tarde.');
+      }
       setIsLoading(false);
     }
   };
 
   const handleResendEmail = async () => {
     if (resendTimer > 0) return;
+    setIsLoading(true);
     try {
-      // O Supabase não tem uma função direta de resend sem estar logado de forma simples, 
-      // mas podemos chamar o signUp novamente ou usar o reset password flow.
-      // Em uma aplicação real, usaríamos o supabase.auth.resend({ type: 'signup', email: ... })
-      await (supabase.auth as any).resend({
+      const { error } = await supabase.auth.resend({
         type: 'signup',
         email: signupData.email,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
       });
+      if (error) throw error;
       setResendTimer(60);
-    } catch (err) {
-      setError('Erro ao reenviar e-mail.');
+      alert('Link enviado novamente! Verifique sua caixa de entrada.');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao reenviar e-mail.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleManualCheck = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      await refreshSession();
+    } catch (err: any) {
+      setError('Ainda não detectamos a confirmação. Por favor, clique no link do e-mail.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -135,38 +156,54 @@ const Login: React.FC = () => {
           <div className="space-y-2">
             <h2 className="text-2xl font-black text-slate-900 dark:text-white">Confirme seu E-mail</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              Um link de ativação oficial do Supabase foi enviado para:<br/>
+              Enviamos um link oficial para:<br/>
               <span className="text-indigo-600 dark:text-indigo-400 font-bold">{signupData.email}</span>
             </p>
           </div>
 
-          <div className="bg-amber-50 dark:bg-amber-500/5 p-5 rounded-2xl border border-amber-100 dark:border-amber-500/10 text-left">
-            <div className="flex gap-3">
-              <Inbox size={18} className="text-amber-600 shrink-0" />
-              <div className="space-y-1">
-                <p className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">Atenção</p>
-                <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Você precisa clicar no link dentro do e-mail para liberar seu acesso ao painel.</p>
+          <div className="space-y-4">
+            <div className="bg-amber-50 dark:bg-amber-500/5 p-5 rounded-2xl border border-amber-100 dark:border-amber-500/10 text-left">
+              <div className="flex gap-3">
+                <Inbox size={18} className="text-amber-600 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">Dica técnica</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Verifique sua pasta de <strong>Spam</strong>. Se não chegar em 5 minutos, o limite do Supabase (3/hora) pode ter sido atingido.</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-3">
-             <div className="p-4 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 text-xs font-bold text-indigo-700 dark:text-indigo-300">
-                Aguardando confirmação automática...
-             </div>
+            {error && (
+              <p className="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-500/10 p-3 rounded-xl border border-rose-100 dark:border-rose-500/20">{error}</p>
+            )}
+
+            <button 
+              onClick={handleManualCheck}
+              disabled={isLoading}
+              className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95 disabled:opacity-50"
+            >
+              {isLoading ? <Loader2 className="animate-spin" size={20} /> : <><ExternalLink size={18} /> Já confirmei no e-mail</>}
+            </button>
 
             <div className="flex flex-col items-center gap-2">
               {resendTimer > 0 ? (
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pode reenviar em {resendTimer}s</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Aguarde {resendTimer}s para reenviar</p>
               ) : (
                 <button 
                   onClick={handleResendEmail} 
+                  disabled={isLoading}
                   className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline text-xs flex items-center gap-1"
                 >
-                  <RefreshCcw size={12} /> Reenviar link de confirmação
+                  <RefreshCcw size={12} /> Reenviar link agora
                 </button>
               )}
             </div>
+          </div>
+
+          <div className="pt-4 border-t dark:border-slate-800">
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center justify-center gap-2">
+              <HelpCircle size={12} /> Problemas com o Supabase?
+            </p>
+            <p className="text-[9px] text-slate-500 mt-1">Acesse seu Dashboard Supabase > Authentication > Providers > Email e verifique se "Confirm Email" está ativo.</p>
           </div>
 
           <button onClick={() => setIsVerifying(false)} className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] hover:text-indigo-500 transition-colors">Voltar para o cadastro</button>
@@ -190,10 +227,10 @@ const Login: React.FC = () => {
           </div>
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full border border-white/10 text-xs font-bold uppercase tracking-widest backdrop-blur-sm">
-              <Sparkles size={14} className="text-indigo-300"/> Integrado com Supabase
+              <Sparkles size={14} className="text-indigo-300"/> Cloud Infrastructure
             </div>
-            <h2 className="text-6xl font-black leading-[1.1] tracking-tight">Tecnologia de <br/><span className="text-indigo-300">Enterprise.</span></h2>
-            <p className="text-xl text-indigo-100/80 font-medium max-w-md leading-relaxed">Infraestrutura escalável com banco de dados em tempo real e autenticação de ponta.</p>
+            <h2 className="text-6xl font-black leading-[1.1] tracking-tight">Alta performance <br/><span className="text-indigo-300">Garantida.</span></h2>
+            <p className="text-xl text-indigo-100/80 font-medium max-w-md leading-relaxed">Conectado diretamente ao seu banco de dados PostgreSQL seguro.</p>
           </div>
           <div className="flex items-center gap-8">
             <div className="text-indigo-200/50 text-xs font-bold uppercase tracking-widest">© 2024 VendaFlow Pro</div>
@@ -284,7 +321,7 @@ const Login: React.FC = () => {
                         type="button" 
                         onClick={lookupCnpj} 
                         disabled={isSearchingCnpj} 
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-xl shadow-indigo-600/30 active:scale-90 transition-all"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black px-4 py-2 rounded-xl flex items-center gap-2 shadow-xl shadow-indigo-600/30 active:scale-90 transition-all"
                       >
                         {isSearchingCnpj ? <Loader2 className="animate-spin" size={12} /> : <Search size={12} />}
                         {isSearchingCnpj ? 'BUSCANDO...' : 'CONSULTAR'}
@@ -305,11 +342,11 @@ const Login: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">E-mail Principal</label>
-                  <input type="email" required placeholder="admin@empresa.com" className="w-full px-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:border-indigo-500 outline-none transition-all" value={signupData.email} onChange={(e) => setSignupData({...signupData, email: e.target.value})} />
+                  <input type="email" required placeholder="admin@empresa.com" className="w-full px-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" value={signupData.email} onChange={(e) => setSignupData({...signupData, email: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">WhatsApp</label>
-                  <input type="text" required placeholder="(00) 00000-0000" className="w-full px-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:border-indigo-500 outline-none transition-all" value={signupData.phone} onChange={(e) => setSignupData({...signupData, phone: e.target.value})} />
+                  <input type="text" required placeholder="(00) 0 0000-0000" className="w-full px-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" value={signupData.phone} onChange={(e) => setSignupData({...signupData, phone: e.target.value})} />
                 </div>
               </div>
 
@@ -318,14 +355,14 @@ const Login: React.FC = () => {
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Senha Forte</label>
                   <div className="relative group">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                    <input type="password" required placeholder="••••••••" className="w-full pl-9 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:border-indigo-500 outline-none transition-all" value={signupData.password} onChange={(e) => setSignupData({...signupData, password: e.target.value})} />
+                    <input type="password" required placeholder="••••••••" className="w-full pl-9 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:border-indigo-500 transition-all" value={signupData.password} onChange={(e) => setSignupData({...signupData, password: e.target.value})} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Repita a Senha</label>
                   <div className="relative group">
                     <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                    <input type="password" required placeholder="••••••••" className="w-full pl-9 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:border-indigo-500 outline-none transition-all" value={signupData.confirmPassword} onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})} />
+                    <input type="password" required placeholder="••••••••" className="w-full pl-9 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:border-indigo-500 transition-all" value={signupData.confirmPassword} onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})} />
                   </div>
                 </div>
               </div>

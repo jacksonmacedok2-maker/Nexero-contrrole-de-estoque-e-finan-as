@@ -8,6 +8,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata: any) => Promise<void>;
   logout: () => void;
+  refreshSession: () => Promise<void>;
   isAuthenticated: boolean;
   hasPermission: (permission: Permission) => boolean;
   isVerifying: boolean;
@@ -22,27 +23,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Escuta mudanças no estado de autenticação (Login, Logout, Token renovado)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Verificar sessão atual ao carregar
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        const metadata = session.user.user_metadata;
-        setUser({
-          id: session.user.id,
-          name: metadata.name || metadata.companyName || session.user.email?.split('@')[0],
-          email: session.user.email || '',
-          role: (metadata.role as UserRole) || UserRole.ADMIN,
-          active: true,
-          permissions: (metadata.permissions as Permission[]) || ['FINANCE', 'INVENTORY', 'PRODUCTS', 'ORDERS', 'POS', 'SETTINGS', 'REPORTS', 'CLIENTS']
-        });
-        setIsVerifying(false);
-      } else {
-        setUser(null);
+        updateUserState(session.user);
       }
       setLoading(false);
     });
 
+    // Escutar mudanças no estado de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`Auth Event: ${event}`);
+      if (session?.user) {
+        updateUserState(session.user);
+        setIsVerifying(false);
+      } else {
+        setUser(null);
+      }
+    });
+
     return () => subscription.unsubscribe();
   }, []);
+
+  const updateUserState = (supabaseUser: any) => {
+    const metadata = supabaseUser.user_metadata || {};
+    setUser({
+      id: supabaseUser.id,
+      name: metadata.companyName || metadata.name || supabaseUser.email?.split('@')[0],
+      email: supabaseUser.email || '',
+      role: (metadata.role as UserRole) || UserRole.ADMIN,
+      active: true,
+      permissions: (metadata.permissions as Permission[]) || ['FINANCE', 'INVENTORY', 'PRODUCTS', 'ORDERS', 'POS', 'SETTINGS', 'REPORTS', 'CLIENTS']
+    });
+  };
+
+  const refreshSession = async () => {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) throw error;
+    if (data.user) {
+      updateUserState(data.user);
+      setIsVerifying(false);
+    }
+  };
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -58,14 +80,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...metadata,
           role: UserRole.ADMIN,
           permissions: ['FINANCE', 'INVENTORY', 'PRODUCTS', 'ORDERS', 'POS', 'SETTINGS', 'REPORTS', 'CLIENTS']
-        }
+        },
+        emailRedirectTo: window.location.origin
       }
     });
 
     if (error) throw error;
     
-    // Se o usuário foi criado mas precisa confirmar e-mail
-    if (data.user && data.session === null) {
+    // Supabase retorna sessão null se o e-mail de confirmação for necessário
+    if (data.user && !data.session) {
       setIsVerifying(true);
     }
   };
@@ -84,7 +107,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Conectando ao VendaFlow Cloud...</p>
+        </div>
       </div>
     );
   }
@@ -95,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login, 
       signUp, 
       logout, 
+      refreshSession,
       isAuthenticated: !!user, 
       hasPermission,
       isVerifying,

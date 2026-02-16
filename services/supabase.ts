@@ -1,11 +1,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = (process.env as any).SUPABASE_URL || '';
-const supabaseAnonKey = (process.env as any).SUPABASE_ANON_KEY || '';
+// Credenciais fornecidas para integração direta
+const supabaseUrl = 'https://sbozssdnqccvflfuxqnj.supabase.co';
+const supabaseAnonKey = 'sb_publishable_Umku-rbOaAJBgHRSJ4Cp3g_mKU9Ykwn';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Supabase credentials not found. Auth will work in mock mode.");
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});

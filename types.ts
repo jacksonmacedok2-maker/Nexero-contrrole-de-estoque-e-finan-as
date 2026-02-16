@@ -24,64 +24,53 @@ export interface User {
   permissions: Permission[];
 }
 
-export interface StockMovement {
-  id: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  type: 'IN' | 'OUT';
-  reason: string;
-  date: string;
-}
-
 export interface Client {
   id: string;
+  user_id?: string;
   name: string;
   cnpj_cpf: string;
   email: string;
   phone: string;
   address: string;
-  creditLimit: number;
-  totalSpent: number;
+  credit_limit: number;
+  total_spent: number;
   type: 'PF' | 'PJ';
+  created_at?: string;
 }
 
-export interface OrderItem {
-  productId: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
+export interface Product {
+  id: string;
+  user_id?: string;
+  name: string;
+  sku: string;
+  price: number;
+  stock: number;
+  min_stock: number;
+  category: string;
+  image_url: string;
+  created_at?: string;
 }
 
 export interface Order {
   id: string;
-  clientId: string;
-  clientName: string;
-  items: OrderItem[];
-  totalAmount: number;
+  user_id?: string;
+  client_id: string;
+  total_amount: number;
   status: OrderStatus;
-  date: string;
   salesperson: string;
-  paymentMethod: string;
+  payment_method: string;
+  created_at: string;
+  // Campos join (opcionais)
+  clients?: { name: string };
 }
 
 export interface Transaction {
   id: string;
+  user_id?: string;
   description: string;
   amount: number;
   type: 'INCOME' | 'EXPENSE';
-  date: string;
   category: string;
   status: 'PAID' | 'PENDING';
-}
-
-export interface CompanySettings {
-  name: string;
-  cnpj: string;
-  address: string;
-  contact: string;
-  fiscalRegime: string;
-  timezone: string;
-  currency: string;
+  date: string;
 }
