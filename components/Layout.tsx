@@ -42,7 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
           </div>
           {!isCompact && (
             <div className="flex flex-col">
-              <h1 className="text-xl font-black tracking-tighter leading-none">NEXERO</h1>
+              <h1 className="text-xl font-black tracking-tighter leading-none text-white">NEXERO</h1>
               <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] mt-1">Enterprise</span>
             </div>
           )}
@@ -78,7 +78,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
             </div>
             {!isCompact && (
               <div className="overflow-hidden">
-                <p className="text-sm font-bold truncate">{user?.name}</p>
+                <p className="text-sm font-bold truncate text-white">{user?.name}</p>
                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest truncate">{user?.role}</p>
               </div>
             )}
@@ -87,7 +87,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-8 transition-colors z-30">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-8 transition-colors z-30 shadow-sm dark:shadow-none">
           <div className="flex items-center gap-4">
             <button className="md:hidden p-2 text-slate-600 dark:text-slate-400" onClick={() => setIsMobileMenuOpen(true)}>
               <Menu size={24} />
@@ -106,15 +106,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors group">
+            <button className="relative p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-slate-200 transition-colors group">
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900 group-hover:scale-125 transition-transform"></span>
             </button>
             <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2"></div>
             <div className="relative">
-              <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors group">
+              <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors group">
                 <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-xs uppercase shadow-lg shadow-indigo-600/10">{user?.name.charAt(0)}</div>
-                <span className="text-sm font-black hidden sm:block tracking-tight">{user?.name.split(' ')[0]}</span>
+                <span className="text-sm font-black hidden sm:block tracking-tight text-slate-800 dark:text-white">{user?.name.split(' ')[0]}</span>
                 <ChevronDown size={14} className={`text-slate-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
               </button>
               {isProfileOpen && (
@@ -134,7 +134,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 md:p-8 relative">
-          <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-slate-100/50 dark:from-indigo-600/5 to-transparent pointer-events-none" />
+          <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-indigo-100/30 dark:from-indigo-600/5 to-transparent pointer-events-none" />
           <div className="relative z-10">{children}</div>
         </main>
       </div>

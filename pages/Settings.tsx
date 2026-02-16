@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { Building2, Receipt, Users, ShoppingBag, Box, Store, Wallet, Bell, Link2, Monitor, ChevronRight, Save, CheckCircle2, UserPlus, Trash2, Edit2, X, Lock, MailCheck, ShieldCheck, ExternalLink, Info, Copy, Globe, Cpu, Server, Send, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Building2, Users, ShoppingBag, Box, Store, Wallet, Bell, Link2, Monitor, ChevronRight, Save, CheckCircle2, UserPlus, Trash2, Edit2, X, Lock, Cpu, Server } from 'lucide-react';
 import { useAppSettings, ThemeMode } from '../contexts/AppSettingsContext';
 import { Language } from '../i18n/translations';
 import { User, UserRole, Permission } from '../types';
 import { generateId } from '../utils/helpers';
 
-type SectionType = 'company' | 'infra' | 'users' | 'commercial' | 'inventory' | 'pos' | 'finance' | 'notifications' | 'integrations' | 'appearance' | 'email_delivery';
+type SectionType = 'company' | 'users' | 'commercial' | 'inventory' | 'pos' | 'finance' | 'notifications' | 'integrations' | 'appearance';
 
 const Settings: React.FC = () => {
   const [activeSection, setActiveSection] = useState<SectionType>('appearance');
@@ -38,8 +38,7 @@ const Settings: React.FC = () => {
   const menuItems = [
     { id: 'appearance', label: t('system_interface'), icon: <Monitor size={18} /> },
     { id: 'users', label: t('users_permissions'), icon: <Users size={18} /> },
-    { id: 'infra', label: 'Infraestrutura & SMTP', icon: <Server size={18} /> },
-    { id: 'company', label: 'Empresa', icon: <Building2 size={18} /> },
+    { id: 'company', label: 'Dados da Empresa', icon: <Building2 size={18} /> },
     { id: 'commercial', label: 'Comercial & Vendas', icon: <ShoppingBag size={18} /> },
     { id: 'inventory', label: 'Estoque & Produtos', icon: <Box size={18} /> },
     { id: 'pos', label: 'Ponto de Venda (PDV)', icon: <Store size={18} /> },
@@ -58,7 +57,7 @@ const Settings: React.FC = () => {
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase">Configurações</h2>
+          <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tighter uppercase">Configurações</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium italic">Customização do ambiente Nexero Enterprise.</p>
         </div>
         {activeSection === 'appearance' && (
@@ -99,7 +98,7 @@ const Settings: React.FC = () => {
           ))}
         </div>
 
-        <div className="flex-1 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-y-auto p-4 md:p-10 transition-colors">
+        <div className="flex-1 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none overflow-y-auto p-4 md:p-10 transition-colors">
           {activeSection === 'appearance' && (
             <div className="space-y-8 max-w-2xl animate-in fade-in slide-in-from-right-4 duration-300">
               <SectionHeader title={t('system_interface')} subtitle={t('system_interface_sub')} />
@@ -139,15 +138,13 @@ const Settings: React.FC = () => {
             </div>
           )}
           
-          {activeSection === 'infra' && <InfraSettingsSection />}
-          
           {activeSection === 'users' && <UsersSettingsForm />}
 
-          {!['appearance', 'users', 'infra'].includes(activeSection) && (
+          {!['appearance', 'users'].includes(activeSection) && (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-50">
               <Cpu size={64} className="mb-4 animate-pulse-slow" />
               <p className="text-sm font-black uppercase tracking-widest">Módulo em Integração</p>
-              <p className="text-xs font-medium">Os recursos de {activeSection} estão sendo sincronizados.</p>
+              <p className="text-xs font-medium">Os recursos de {activeSection} estão sendo sincronizados com a nuvem.</p>
             </div>
           )}
         </div>
@@ -156,122 +153,61 @@ const Settings: React.FC = () => {
   );
 };
 
-const InfraSettingsSection: React.FC = () => {
-  const currentUrl = window.location.origin;
-  const [copied, setCopied] = useState(false);
+const SectionHeader = ({ title, subtitle }: { title: string, subtitle: string }) => (
+  <div className="mb-10 pb-8 border-b border-slate-100 dark:border-slate-800/50">
+    <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{title}</h3>
+    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1 leading-relaxed">{subtitle}</p>
+  </div>
+);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(currentUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+const InputField = ({ label, placeholder, value, onChange, type = "text" }: any) => (
+  <div className="space-y-2">
+    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+    <input 
+      type={type} 
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm font-bold text-slate-800 dark:text-slate-100 transition-all"
+    />
+  </div>
+);
 
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-      <SectionHeader 
-        title="Infraestrutura Nexero Pro" 
-        subtitle="Sua conectividade SMTP Enterprise com Resend foi detectada e está operacional." 
+const SelectField = ({ label, options, value, onChange }: any) => (
+  <div className="space-y-2">
+    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+    <div className="relative group">
+      <select 
+        value={value}
+        onChange={onChange}
+        className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm font-bold text-slate-800 dark:text-slate-100 cursor-pointer transition-all appearance-none"
+      >
+        {options.map((o: any) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+        <ChevronRight size={16} className="rotate-90" />
+      </div>
+    </div>
+  </div>
+);
+
+const ToggleField = ({ label, description, checked, onChange }: any) => (
+  <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-slate-100 dark:border-slate-800 transition-all hover:bg-white dark:hover:bg-slate-800 group">
+    <div className="pr-4">
+      <p className="text-sm font-black text-slate-900 dark:text-slate-100 tracking-tight">{label}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium italic">{description}</p>
+    </div>
+    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+      <input 
+        type="checkbox" 
+        className="sr-only peer" 
+        checked={checked} 
+        onChange={onChange}
       />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <div className="bg-slate-900 text-white p-8 rounded-[2rem] shadow-2xl shadow-indigo-600/20 relative overflow-hidden group border border-slate-800">
-            <div className="absolute -right-4 -top-4 w-32 h-32 bg-indigo-600/20 blur-3xl rounded-full" />
-            <div className="relative z-10 space-y-4">
-              <div className="inline-flex items-center gap-2 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20">
-                <MailCheck size={12} /> SMTP ATIVO: RESEND
-              </div>
-              <h4 className="text-2xl font-black tracking-tight">Entregabilidade Máxima</h4>
-              <p className="text-slate-400 text-sm leading-relaxed font-medium italic">
-                O Nexero está utilizando a infraestrutura do Resend. E-mails de ativação e recuperação de senha agora possuem bypass de spam e entrega em milissegundos.
-              </p>
-              <div className="pt-2 flex flex-col gap-2">
-                 <button 
-                   className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] text-center hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/20"
-                 >
-                   <CheckCircle2 size={16} /> SMTP Configurado
-                 </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-6 rounded-[2rem] space-y-4">
-            <h5 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2 mb-4">
-              <ShieldCheck size={14} className="text-emerald-500" /> Enterprise Readiness
-            </h5>
-            <div className="space-y-3">
-              <InfraCheckItem label="SMTP Provider (Resend) Conectado" completed />
-              <InfraCheckItem label="Anti-Spam Bypass (DMARC/SPF)" completed />
-              <InfraCheckItem label="Site URL Redirect Configurado" completed />
-              <InfraCheckItem label="Custom Domain DNS Mapping" completed={false} />
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-[2rem] space-y-6 shadow-sm">
-             <div>
-                <h4 className="font-black text-slate-800 dark:text-white uppercase text-xs tracking-widest mb-2">Ponto de Redirecionamento</h4>
-                <p className="text-xs text-slate-500 leading-relaxed font-medium italic">Endpoint oficial para autenticação de novos membros.</p>
-             </div>
-
-             <div className="space-y-4">
-                <div className="space-y-2">
-                  <span className="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.2em] ml-1">Authentication Redirect URL</span>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 p-4 rounded-2xl font-mono text-[10px] text-slate-600 dark:text-slate-300 break-all truncate shadow-inner">
-                      {currentUrl}
-                    </div>
-                    <button onClick={handleCopy} className="p-4 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shrink-0 shadow-lg shadow-indigo-600/20 active:scale-95">
-                      {copied ? <CheckCircle2 size={18} /> : <Copy size={18} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-5 bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 rounded-[1.5rem] flex gap-4 items-start">
-                   <ShieldCheck className="text-emerald-500 shrink-0 mt-0.5" size={20} />
-                   <div>
-                      <p className="text-[10px] font-black uppercase text-emerald-800 dark:text-emerald-400 tracking-wider">Configuração Validada</p>
-                      <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                        Sua instância está operando com e-mails transacionais profissionais.
-                      </p>
-                   </div>
-                </div>
-             </div>
-          </div>
-
-          <div className="p-6 bg-indigo-600 text-white rounded-[2rem] flex items-center gap-5 relative overflow-hidden shadow-2xl shadow-indigo-600/20">
-             <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 blur-2xl rounded-full" />
-             <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center shrink-0 backdrop-blur-md border border-white/20">
-                <Cpu size={28} className="text-white animate-pulse" />
-             </div>
-             <div>
-                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.3em]">IA Engine Status</p>
-                <p className="text-lg font-black tracking-tight">Gemini 2.5 Flash Lite</p>
-                <p className="text-[10px] font-bold text-indigo-200/60 uppercase">Latência: 12ms (Otimizado)</p>
-             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const InfraCheckItem = ({ label, completed }: { label: string, completed: boolean }) => (
-  <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl transition-all hover:border-indigo-500/30 group">
-    <div className="flex items-center gap-3">
-      <div className={`w-2 h-2 rounded-full ${completed ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300 dark:bg-slate-700'}`} />
-      <span className={`text-[11px] font-bold uppercase tracking-tighter ${completed ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'}`}>{label}</span>
-    </div>
-    {completed ? (
-      <div className="w-6 h-6 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg flex items-center justify-center border border-emerald-100 dark:border-emerald-500/20">
-        <CheckCircle2 size={14} className="text-emerald-500" />
-      </div>
-    ) : (
-      <div className="w-6 h-6 border-2 border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-center">
-        <div className="w-1.5 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
-      </div>
-    )}
+      <div className="w-12 h-7 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 shadow-inner"></div>
+    </label>
   </div>
 );
 
@@ -331,32 +267,32 @@ const UsersSettingsForm: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-slate-50 dark:bg-slate-800/30 rounded-[2rem] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-800/30 rounded-[2rem] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead>
-            <tr className="bg-slate-100 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
+            <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
               <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('name')}</th>
               <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('role')}</th>
               <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('status')}</th>
               <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">{t('actions')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
             {users.map(user => (
-              <tr key={user.id} className="hover:bg-white dark:hover:bg-slate-800/50 transition-colors group">
+              <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black shadow-sm border border-indigo-100 dark:border-indigo-500/10">
                       {user.name.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight">{user.name}</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-slate-100 tracking-tight">{user.name}</p>
                       <p className="text-xs text-slate-500 font-medium italic">{user.email}</p>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border dark:border-slate-700 uppercase tracking-wider">
+                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 uppercase tracking-wider">
                     {user.role}
                   </span>
                 </td>
@@ -434,8 +370,8 @@ const UserModal: React.FC<{ user: User | null, onClose: () => void, onSave: (use
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{user ? t('edit_user') : t('add_user')}</h3>
+        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+          <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{user ? t('edit_user') : t('add_user')}</h3>
           <button onClick={onClose} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-xl text-slate-400 hover:text-slate-600 transition-colors shadow-sm"><X size={24} /></button>
         </div>
         
@@ -464,7 +400,7 @@ const UserModal: React.FC<{ user: User | null, onClose: () => void, onSave: (use
             />
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('status')}</label>
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border dark:border-slate-700">
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
                 <button 
                   onClick={() => setFormData({...formData, active: true})}
                   className={`flex-1 py-2.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${formData.active ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-sm' : 'text-slate-400'}`}
@@ -482,7 +418,7 @@ const UserModal: React.FC<{ user: User | null, onClose: () => void, onSave: (use
           </div>
 
           <div className="space-y-4 pt-2">
-            <p className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 uppercase tracking-widest">
+            <p className="text-xs font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 uppercase tracking-widest">
               <Lock size={16} className="text-indigo-500" /> Níveis de Acesso
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -506,8 +442,8 @@ const UserModal: React.FC<{ user: User | null, onClose: () => void, onSave: (use
           </div>
         </div>
 
-        <div className="p-8 bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-800 flex gap-4">
-          <button onClick={onClose} className="flex-1 py-4 bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl hover:bg-white/50 text-xs uppercase tracking-widest">Cancelar</button>
+        <div className="p-8 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex gap-4">
+          <button onClick={onClose} className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl hover:bg-white/50 text-xs uppercase tracking-widest">Cancelar</button>
           <button 
             onClick={() => onSave(formData)}
             className="flex-2 w-2/3 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-95 text-xs uppercase tracking-widest"
@@ -519,63 +455,5 @@ const UserModal: React.FC<{ user: User | null, onClose: () => void, onSave: (use
     </div>
   );
 };
-
-const SectionHeader = ({ title, subtitle }: { title: string, subtitle: string }) => (
-  <div className="mb-10 pb-8 border-b dark:border-slate-800/50">
-    <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{title}</h3>
-    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1 leading-relaxed">{subtitle}</p>
-  </div>
-);
-
-const InputField = ({ label, placeholder, value, onChange, type = "text" }: any) => (
-  <div className="space-y-2">
-    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{label}</label>
-    <input 
-      type={type} 
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm font-bold text-slate-800 dark:text-slate-100 transition-all"
-    />
-  </div>
-);
-
-const SelectField = ({ label, options, value, onChange }: any) => (
-  <div className="space-y-2">
-    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{label}</label>
-    <div className="relative group">
-      <select 
-        value={value}
-        onChange={onChange}
-        className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm font-bold text-slate-800 dark:text-slate-100 cursor-pointer transition-all appearance-none"
-      >
-        {options.map((o: any) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-        <ChevronRight size={16} className="rotate-90" />
-      </div>
-    </div>
-  </div>
-);
-
-const ToggleField = ({ label, description, checked, onChange }: any) => (
-  <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-slate-100 dark:border-slate-800 transition-all hover:bg-white dark:hover:bg-slate-800 group">
-    <div className="pr-4">
-      <p className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight">{label}</p>
-      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium italic">{description}</p>
-    </div>
-    <label className="relative inline-flex items-center cursor-pointer shrink-0">
-      <input 
-        type="checkbox" 
-        className="sr-only peer" 
-        checked={checked} 
-        onChange={onChange}
-      />
-      <div className="w-12 h-7 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 shadow-inner"></div>
-    </label>
-  </div>
-);
 
 export default Settings;
