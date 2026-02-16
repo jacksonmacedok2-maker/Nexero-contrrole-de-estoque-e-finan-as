@@ -51,17 +51,33 @@ export interface Product {
   created_at?: string;
 }
 
+export interface OrderItem {
+  id?: string;
+  order_id?: string;
+  product_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  discount: number;
+  total_price: number;
+}
+
 export interface Order {
   id: string;
+  code: string;
   user_id?: string;
-  client_id: string;
+  client_id: string | null;
   total_amount: number;
+  discount_total: number;
+  subtotal: number;
   status: OrderStatus;
   salesperson: string;
   payment_method: string;
+  notes?: string;
   created_at: string;
-  // Campos join (opcionais)
+  // Joins
   clients?: { name: string };
+  order_items?: OrderItem[];
 }
 
 export interface Transaction {

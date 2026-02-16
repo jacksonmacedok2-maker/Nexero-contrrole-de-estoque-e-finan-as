@@ -4,13 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexero - Enterprise Intelligence</title>
+    <title>Nexero - Gestão Comercial Inteligente</title>
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/5968/5968204.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5968/5968204.png">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#0d9488">
     
-    <!-- Fallback para ambientes de hospedagem convencional -->
     <script>
       window.process = window.process || { env: {} };
     </script>
@@ -21,11 +20,21 @@
         darkMode: 'class',
         theme: {
           extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+            colors: {
+              brand: {
+                50: '#f0fdfa',
+                100: '#ccfbf1',
+                500: '#14b8a6',
+                600: '#0d9488',
+                700: '#0f766e',
+              },
+              surface: {
+                800: '#1e293b',
+                900: '#0f172a',
+              }
             },
-            animation: {
-              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
             }
           },
         },
@@ -33,11 +42,11 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
-        .dark .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); }
+        body { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
+        .sidebar-active { background-color: #0d9488; color: white; }
+        .card-shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
     </style>
 <script type="importmap">
 {
@@ -54,22 +63,8 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
     <div id="root"></div>
-    
-    <!-- Ponto de entrada crucial para o React -->
     <script type="module" src="./index.tsx"></script>
-
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(reg => {
-            console.log('Nexero SW registrado:', reg.scope);
-          }).catch(err => {
-            console.log('Erro ao registrar SW:', err);
-          });
-        });
-      }
-    </script>
 </body>
 </html>

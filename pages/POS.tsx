@@ -4,7 +4,8 @@ import { Search, ShoppingCart, Trash2, CheckCircle, User, CreditCard, Banknote, 
 import { formatCurrency } from '../utils/helpers';
 import { db } from '../services/database';
 import { printService } from '../services/print';
-import { Product } from '../types';
+// Fix: Added Order and OrderStatus to imports for strict typing
+import { Product, Order, OrderStatus } from '../types';
 
 const POS: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -46,25 +47,27 @@ const POS: React.FC = () => {
     if (cart.length === 0) return;
     setIsFinishing(true);
     try {
-      const order = {
+      // Fix: Explicitly type 'order' and use OrderStatus enum to resolve Type 'string' is not assignable to type 'OrderStatus'
+      const order: Partial<Order> = {
         client_id: null,
         total_amount: total,
-        status: 'COMPLETED',
+        status: OrderStatus.COMPLETED,
         salesperson: 'Caixa 01',
         payment_method: method
       };
 
+      // Fix: Added 'discount: 0' to the object to satisfy OrderItem interface requirements
       const items = cart.map(item => ({
         product_id: item.product.id,
         quantity: item.qty,
         unit_price: item.product.price,
+        discount: 0,
         total_price: item.product.price * item.qty,
-        name: item.product.name // Cache do nome para impressão
+        name: item.product.name 
       }));
 
       const savedOrder = await db.orders.create(order, items);
       
-      setLastSale({ order: { ...order, id: savedOrder?.id || 'NO-ID' }, items });
       setLastSale({ order: { ...order, id: savedOrder?.id || 'NO-ID' }, items });
       setCart([]);
     } catch (err: any) {
@@ -90,7 +93,6 @@ const POS: React.FC = () => {
               placeholder="Buscar produtos reais no banco (F2)..." 
               className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               value={search}
-              // Fix: change 'setSearchTerm' to 'setSearch' to match the component's state variable name
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>

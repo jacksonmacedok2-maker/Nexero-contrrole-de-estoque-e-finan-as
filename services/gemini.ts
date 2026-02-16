@@ -32,10 +32,9 @@ async function decodeAudioData(
 
 export const geminiService = {
   async getSalesInsights(stats: any) {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) return "Insights não disponíveis (Chave de API ausente).";
-
-    const ai = new GoogleGenAI({ apiKey });
+    // Fix: Directly use process.env.API_KEY when initializing GoogleGenAI as per strict guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const prompt = `Analise os seguintes dados de vendas de hoje para uma pequena empresa:
     Vendas do dia: R$ ${stats.dailySales}
     Receita mensal: R$ ${stats.monthlyRevenue}
@@ -57,10 +56,9 @@ export const geminiService = {
   },
 
   async speakInsight(text: string) {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) return;
-
-    const ai = new GoogleGenAI({ apiKey });
+    // Fix: Directly use process.env.API_KEY when initializing GoogleGenAI as per strict guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     try {
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",

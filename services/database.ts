@@ -1,8 +1,7 @@
 
 import { supabase } from './supabase';
-import { Client, Order, Transaction, Product } from '../types';
+import { Client, Order, Transaction, Product, OrderItem } from '../types';
 
-// Chaves para o LocalStorage
 const STORAGE_KEYS = {
   CLIENTS: 'nexero_cache_clients',
   PRODUCTS: 'nexero_cache_products',
@@ -11,9 +10,6 @@ const STORAGE_KEYS = {
   SYNC_QUEUE: 'nexero_sync_queue'
 };
 
-/**
- * Utilitários de Cache Local
- */
 const localStore = {
   get: (key: string) => {
     const data = localStorage.getItem(key);
@@ -30,33 +26,24 @@ const localStore = {
 };
 
 export const db = {
-  // SINCRONIZAÇÃO
   async syncPendingData() {
     if (!navigator.onLine) return;
-    
     const queue = localStore.get(STORAGE_KEYS.SYNC_QUEUE);
     if (queue.length === 0) return;
 
-    console.log(`[Sync] Iniciando sincronização de ${queue.length} itens...`);
-    
     const remainingQueue = [];
-    
     for (const item of queue) {
       try {
-        if (item.type === 'CLIENT') await this.clients.create(item.payload, true);
-        if (item.type === 'PRODUCT') await this.products.create(item.payload, true);
-        if (item.type === 'ORDER') await this.orders.create(item.payload.order, item.payload.items, true);
+        if (item.type === 'CLIENT') await db.clients.create(item.payload, true);
+        if (item.type === 'PRODUCT') await db.products.create(item.payload, true);
+        if (item.type === 'ORDER') await db.orders.create(item.payload.order, item.payload.items);
       } catch (err) {
-        console.error(`[Sync] Falha ao sincronizar item ${item.id}:`, err);
         remainingQueue.push(item);
       }
     }
-    
     localStore.set(STORAGE_KEYS.SYNC_QUEUE, remainingQueue);
-    console.log(`[Sync] Sincronização concluída. ${remainingQueue.length} pendentes.`);
   },
 
-  // CLIENTES
   clients: {
     async getAll() {
       try {
@@ -66,31 +53,27 @@ export const db = {
           localStore.set(STORAGE_KEYS.CLIENTS, data);
           return data as Client[];
         }
-      } catch (e) {
-        console.warn("Offline: Carregando clientes do cache.");
-      }
+      } catch (e) {}
       return localStore.get(STORAGE_KEYS.CLIENTS);
     },
     async create(client: Partial<Client>, isSyncing = false) {
+      const { id, user_id, ...cleanClient } = client as any;
       if (!isSyncing) {
-        // Salva no cache imediato para UX instantânea
         const current = localStore.get(STORAGE_KEYS.CLIENTS);
         localStore.set(STORAGE_KEYS.CLIENTS, [...current, { ...client, id: 'temp_' + Date.now() }]);
       }
-
       if (navigator.onLine) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Não autenticado");
-        const { data, error } = await supabase.from('clients').insert([{ ...client, user_id: user.id }]).select();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) throw new Error("Sessão expirada.");
+        const { data, error } = await supabase.from('clients').insert([{ ...cleanClient, user_id: session.user.id }]).select();
         if (error) throw error;
         return data[0];
       } else if (!isSyncing) {
-        localStore.addToQueue('CLIENT', client);
+        localStore.addToQueue('CLIENT', cleanClient);
       }
     }
   },
 
-  // PRODUTOS
   products: {
     async getAll() {
       try {
@@ -100,75 +83,127 @@ export const db = {
           localStore.set(STORAGE_KEYS.PRODUCTS, data);
           return data as Product[];
         }
-      } catch (e) {
-        console.warn("Offline: Carregando produtos do cache.");
-      }
+      } catch (e) {}
       return localStore.get(STORAGE_KEYS.PRODUCTS);
     },
     async create(product: Partial<Product>, isSyncing = false) {
+      const { id, user_id, ...cleanProduct } = product as any;
       if (!isSyncing) {
         const current = localStore.get(STORAGE_KEYS.PRODUCTS);
         localStore.set(STORAGE_KEYS.PRODUCTS, [...current, { ...product, id: 'temp_' + Date.now() }]);
       }
-
       if (navigator.onLine) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Não autenticado");
-        const { data, error } = await supabase.from('products').insert([{ ...product, user_id: user.id }]).select();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) throw new Error("Sessão expirada.");
+        const { data, error } = await supabase.from('products').insert([{ ...cleanProduct, user_id: session.user.id }]).select();
         if (error) throw error;
         return data[0];
       } else if (!isSyncing) {
-        localStore.addToQueue('PRODUCT', product);
+        localStore.addToQueue('PRODUCT', cleanProduct);
       }
     }
   },
 
-  // PEDIDOS
   orders: {
     async getAll() {
       try {
         if (navigator.onLine) {
-          const { data, error } = await supabase.from('orders').select('*, clients(name)').order('created_at', { ascending: false });
+          const { data, error } = await supabase
+            .from('orders')
+            .select('*, clients(name), order_items(*)')
+            .order('created_at', { ascending: false });
           if (error) throw error;
           localStore.set(STORAGE_KEYS.ORDERS, data);
           return data;
         }
-      } catch (e) {
-        console.warn("Offline: Carregando pedidos do cache.");
-      }
+      } catch (e) {}
       return localStore.get(STORAGE_KEYS.ORDERS);
     },
-    async create(order: any, items: any[], isSyncing = false) {
+
+    async getNextCode(): Promise<string> {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return 'PED-000000';
+
+      const { data, error } = await supabase
+        .from('order_sequences')
+        .select('current_value')
+        .eq('user_id', session.user.id)
+        .single();
+
+      let nextVal = 1;
+      if (error && error.code === 'PGRST116') {
+        await supabase.from('order_sequences').insert({ user_id: session.user.id, current_value: 1 });
+      } else if (data) {
+        nextVal = data.current_value + 1;
+        await supabase.from('order_sequences').update({ current_value: nextVal }).eq('user_id', session.user.id);
+      }
+
+      return `PED-${nextVal.toString().padStart(6, '0')}`;
+    },
+
+    async create(order: Partial<Order>, items: OrderItem[]) {
       if (navigator.onLine) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Não autenticado");
-        const { data: orderData, error: orderError } = await supabase.from('orders').insert([{ ...order, user_id: user.id }]).select().single();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) throw new Error("Não autenticado");
+
+        const code = await this.getNextCode();
+
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .insert([{ 
+            client_id: order.client_id,
+            total_amount: order.total_amount,
+            subtotal: order.subtotal || order.total_amount,
+            discount_total: order.discount_total || 0,
+            status: order.status,
+            salesperson: order.salesperson,
+            payment_method: order.payment_method,
+            notes: order.notes,
+            code,
+            user_id: session.user.id 
+          }])
+          .select()
+          .single();
+
         if (orderError) throw orderError;
 
         const itemsToInsert = items.map(item => ({
           order_id: orderData.id,
           product_id: item.product_id,
+          name: item.name,
           quantity: item.quantity,
           unit_price: item.unit_price,
+          discount: item.discount || 0,
           total_price: item.total_price
         }));
 
-        await supabase.from('order_items').insert(itemsToInsert);
-        await db.finance.createTransaction({
-          description: `Venda #${orderData.id.substring(0,8)}`,
-          amount: order.total_amount,
-          type: 'INCOME',
-          category: 'Vendas',
-          status: 'PAID'
-        });
+        const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
+        if (itemsError) throw itemsError;
+
+        if (order.status === 'COMPLETED') {
+          for (const item of items) {
+            const { data: prod } = await supabase.from('products').select('stock').eq('id', item.product_id).single();
+            if (prod) {
+              await supabase.from('products').update({ stock: prod.stock - item.quantity }).eq('id', item.product_id);
+            }
+          }
+        }
+
         return orderData;
-      } else if (!isSyncing) {
+      } else {
         localStore.addToQueue('ORDER', { order, items });
+        return { id: 'offline_temp', ...order };
+      }
+    },
+
+    async updateStatus(orderId: string, status: string) {
+      if (navigator.onLine) {
+        const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
+        if (error) throw error;
       }
     }
   },
 
-  // FINANCEIRO
   finance: {
     async getTransactions() {
       try {
@@ -183,43 +218,34 @@ export const db = {
     },
     async createTransaction(transaction: Partial<Transaction>) {
       if (navigator.onLine) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Não autenticado");
-        const { data, error } = await supabase.from('transactions').insert([{ ...transaction, user_id: user.id, date: new Date().toISOString() }]).select();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) throw new Error("Não autenticado");
+        const { data, error } = await supabase.from('transactions').insert([{ ...transaction, user_id: session.user.id, date: new Date().toISOString() }]).select();
         if (error) throw error;
         return data[0];
       }
-      // Transações financeiras costumam ser geradas por ordens, simplificado aqui.
     }
   },
 
   async getDashboardStats() {
     try {
       if (navigator.onLine) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return { dailySales: 0, outOfStockItems: 0, pendingOrders: 0, monthlyRevenue: 0 };
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return { dailySales: 0, outOfStockItems: 0, pendingOrders: 0, monthlyRevenue: 0 };
         const today = new Date();
         today.setHours(0,0,0,0);
-        const { data: ordersToday } = await supabase.from('orders').select('total_amount').gte('created_at', today.toISOString());
-        const { data: productsStock } = await supabase.from('products').select('stock, min_stock');
-        const stats = {
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const { data: ordersToday } = await supabase.from('orders').select('total_amount').gte('created_at', today.toISOString()).eq('status', 'COMPLETED');
+        const { data: ordersMonth } = await supabase.from('orders').select('total_amount').gte('created_at', firstDayOfMonth.toISOString()).eq('status', 'COMPLETED');
+        const { data: productsStock } = await supabase.from('products').select('stock');
+        return {
           dailySales: ordersToday?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0,
+          monthlyRevenue: ordersMonth?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0,
           outOfStockItems: productsStock?.filter(p => p.stock <= 0).length || 0,
-          pendingOrders: 0,
-          monthlyRevenue: 0
+          pendingOrders: 0
         };
-        return stats;
       }
     } catch (e) {}
-    
-    // Fallback básico offline para o dashboard
-    const cachedOrders = localStore.get(STORAGE_KEYS.ORDERS);
-    const cachedProducts = localStore.get(STORAGE_KEYS.PRODUCTS);
-    return {
-      dailySales: cachedOrders.length > 0 ? 1500 : 0, // Mock simplificado
-      outOfStockItems: cachedProducts.filter((p: any) => p.stock <= 0).length || 0,
-      pendingOrders: 0,
-      monthlyRevenue: 0
-    };
+    return { dailySales: 0, monthlyRevenue: 0, outOfStockItems: 0, pendingOrders: 0 };
   }
 };
