@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle, User, Phone, Building, Search, ArrowLeft, Landmark, ShieldCheck, Loader2, Sparkles, Inbox, RefreshCcw, ExternalLink, HelpCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle, User, Phone, Building, Search, ArrowLeft, Landmark, ShieldCheck, Loader2, Sparkles, Inbox, RefreshCcw, ExternalLink, HelpCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
 import { fetchCnpjData } from '../utils/helpers';
@@ -19,6 +19,10 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Novos estados para visibilidade de senha no cadastro
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
 
   const [signupData, setSignupData] = useState({
     name: '',
@@ -139,6 +143,10 @@ const Login: React.FC = () => {
   };
 
   const isCnpjReady = documentType === 'CNPJ' && signupData.document.replace(/\D/g, '').length === 14;
+  
+  // Verificação de igualdade das senhas para feedback visual
+  const passwordsMatch = signupData.password === signupData.confirmPassword;
+  const showConfirmError = signupData.confirmPassword.length > 0 && !passwordsMatch;
 
   if (isVerifying) {
     return (
@@ -161,17 +169,21 @@ const Login: React.FC = () => {
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="bg-amber-50 dark:bg-amber-500/5 p-5 rounded-2xl border border-amber-100 dark:border-amber-500/10 text-left">
-              <div className="flex gap-3">
-                <Inbox size={18} className="text-amber-600 shrink-0" />
-                <div className="space-y-1">
-                  <p className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">Dica técnica</p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Verifique sua pasta de <strong>Spam</strong>. Se não chegar em 5 minutos, o limite do Supabase (3/hora) pode ter sido atingido.</p>
-                </div>
+          <div className="bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-200 dark:border-amber-700/50 p-5 rounded-3xl text-left animate-pulse">
+            <div className="flex gap-4">
+              <div className="bg-amber-500 text-white p-2 rounded-xl h-fit">
+                <AlertTriangle size={20} />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-black text-amber-900 dark:text-amber-200 uppercase tracking-widest">Atenção ao Spam</h4>
+                <p className="text-xs text-amber-800 dark:text-amber-300 font-bold leading-relaxed">
+                  Se o e-mail não aparecer em 1 minuto, verifique obrigatoriamente sua pasta de <span className="underline decoration-2 underline-offset-2">Lixo Eletrônico ou Spam</span>.
+                </p>
               </div>
             </div>
+          </div>
 
+          <div className="space-y-4">
             {error && (
               <p className="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-500/10 p-3 rounded-xl border border-rose-100 dark:border-rose-500/20">{error}</p>
             )}
@@ -193,7 +205,7 @@ const Login: React.FC = () => {
                   disabled={isLoading}
                   className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline text-xs flex items-center gap-1"
                 >
-                  <RefreshCcw size={12} /> Reenviar link agora
+                  <RefreshCcw size={12} /> Não recebi, enviar novamente
                 </button>
               )}
             </div>
@@ -201,9 +213,9 @@ const Login: React.FC = () => {
 
           <div className="pt-4 border-t dark:border-slate-800">
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center justify-center gap-2">
-              <HelpCircle size={12} /> Problemas com o Supabase?
+              <HelpCircle size={12} /> Ainda com problemas?
             </p>
-            <p className="text-[9px] text-slate-500 mt-1">Acesse seu Dashboard Supabase > Authentication > Providers > Email e verifique se "Confirm Email" está ativo.</p>
+            <p className="text-[9px] text-slate-500 mt-1">Alguns provedores corporativos podem bloquear e-mails automáticos do Supabase. Tente usar um Gmail ou Outlook pessoal.</p>
           </div>
 
           <button onClick={() => setIsVerifying(false)} className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] hover:text-indigo-500 transition-colors">Voltar para o cadastro</button>
@@ -214,7 +226,6 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      {/* Lado Esquerdo - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-indigo-600">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 opacity-90" />
@@ -238,7 +249,6 @@ const Login: React.FC = () => {
         </div>
       </div>
 
-      {/* Lado Direito - Formulários */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 overflow-y-auto">
         <div className="w-full max-w-md space-y-8 py-12">
           <div className="text-center lg:text-left">
@@ -263,7 +273,6 @@ const Login: React.FC = () => {
           )}
 
           {isLogin ? (
-            /* FORMULÁRIO DE LOGIN */
             <form onSubmit={handleLoginSubmit} className="space-y-6 animate-in slide-in-from-right-4 duration-500">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Usuário / E-mail</label>
@@ -290,7 +299,6 @@ const Login: React.FC = () => {
               </div>
             </form>
           ) : (
-            /* FORMULÁRIO DE CADASTRO */
             <form onSubmit={handleSignupSubmit} className="space-y-5 animate-in slide-in-from-left-4 duration-500 pb-12">
               <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl mb-2">
                 <button type="button" onClick={() => setDocumentType('CNPJ')} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-widest ${documentType === 'CNPJ' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-lg' : 'text-slate-500'}`}>
@@ -355,20 +363,42 @@ const Login: React.FC = () => {
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Senha Forte</label>
                   <div className="relative group">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                    <input type="password" required placeholder="••••••••" className="w-full pl-9 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:border-indigo-500 transition-all" value={signupData.password} onChange={(e) => setSignupData({...signupData, password: e.target.value})} />
+                    <input type={showSignupPassword ? "text" : "password"} required placeholder="••••••••" className="w-full pl-9 pr-10 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:border-indigo-500 transition-all" value={signupData.password} onChange={(e) => setSignupData({...signupData, password: e.target.value})} />
+                    <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                      {showSignupPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Repita a Senha</label>
                   <div className="relative group">
-                    <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                    <input type="password" required placeholder="••••••••" className="w-full pl-9 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:border-indigo-500 transition-all" value={signupData.confirmPassword} onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})} />
+                    <ShieldCheck className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${showConfirmError ? 'text-rose-500' : 'text-slate-400'}`} size={14} />
+                    <input 
+                      type={showSignupConfirmPassword ? "text" : "password"} 
+                      required 
+                      placeholder="••••••••" 
+                      className={`w-full pl-9 pr-10 py-4 bg-white dark:bg-slate-900 border ${showConfirmError ? 'border-rose-500 focus:ring-rose-500/10' : 'border-slate-200 dark:border-slate-800 focus:border-indigo-500'} rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 transition-all`} 
+                      value={signupData.confirmPassword} 
+                      onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})} 
+                    />
+                    <button type="button" onClick={() => setShowSignupConfirmPassword(!showSignupConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                      {showSignupConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
+                  {showConfirmError && (
+                    <p className="text-[9px] font-bold text-rose-500 flex items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-1">
+                      <XCircle size={10} /> As senhas não coincidem
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <button type="submit" disabled={isLoading || isSearchingCnpj} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-600/30 active:scale-[0.98] uppercase tracking-widest mt-2">
-                {isLoading ? <Loader2 className="animate-spin" size={20} /> : <>Criar Banco de Dados <ArrowRight size={20}/></>}
+              <button 
+                type="submit" 
+                disabled={isLoading || isSearchingCnpj || showConfirmError} 
+                className={`w-full py-5 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all shadow-2xl active:scale-[0.98] uppercase tracking-widest mt-2 ${showConfirmError ? 'bg-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30'}`}
+              >
+                {isLoading ? <Loader2 className="animate-spin" size={20} /> : <>Confirmar Cadastro <ArrowRight size={20}/></>}
               </button>
             </form>
           )}

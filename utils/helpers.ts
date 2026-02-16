@@ -20,6 +20,40 @@ export const formatTime = (dateString: string) => {
 export const generateId = () => Math.random().toString(36).substring(2, 9).toUpperCase();
 
 /**
+ * Valida se um CPF é matematicamente válido (Algoritmo de Dígito Verificador)
+ */
+export const isValidCpf = (cpf: string): boolean => {
+  const cleanCpf = cpf.replace(/\D/g, '');
+  
+  if (cleanCpf.length !== 11) return false;
+  
+  // Impede CPFs com todos os números iguais (ex: 111.111.111-11)
+  if (/^(\d)\1+$/.test(cleanCpf)) return false;
+  
+  let sum = 0;
+  let remainder;
+
+  // Validação do primeiro dígito
+  for (let i = 1; i <= 9; i++) {
+    sum = sum + parseInt(cleanCpf.substring(i - 1, i)) * (11 - i);
+  }
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleanCpf.substring(9, 10))) return false;
+
+  // Validação do segundo dígito
+  sum = 0;
+  for (let i = 1; i <= 10; i++) {
+    sum = sum + parseInt(cleanCpf.substring(i - 1, i)) * (12 - i);
+  }
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleanCpf.substring(10, 11))) return false;
+
+  return true;
+};
+
+/**
  * Consulta dados de um CNPJ via BrasilAPI (Receita Federal)
  * Suporta limpeza automática de caracteres não numéricos.
  */

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, MoreHorizontal, UserRound, Mail, Phone, MapPin, Landmark, ArrowRight, X, Building, CheckCircle2, AlertCircle, Loader2, Sparkles, User } from 'lucide-react';
-import { formatCurrency, generateId, fetchCnpjData } from '../utils/helpers';
+import { formatCurrency, generateId, fetchCnpjData, isValidCpf } from '../utils/helpers';
 import { Client as ClientType } from '../types';
 import { db } from '../services/database';
 
@@ -175,6 +175,20 @@ const ClientModal: React.FC<{ onClose: () => void, onRefresh: () => void }> = ({
     if (!formData.name) {
       setError('O nome/razão social é obrigatório.');
       return;
+    }
+
+    // Validação de CPF para Pessoa Física
+    if (docType === 'PF') {
+      if (!isValidCpf(formData.cnpj_cpf)) {
+        setError('O CPF informado é inválido. Por favor, verifique os números.');
+        return;
+      }
+    } else {
+      // Validação básica de tamanho para CNPJ
+      if (formData.cnpj_cpf.replace(/\D/g, '').length !== 14) {
+        setError('O CNPJ deve conter exatamente 14 números.');
+        return;
+      }
     }
 
     setIsSaving(true);
