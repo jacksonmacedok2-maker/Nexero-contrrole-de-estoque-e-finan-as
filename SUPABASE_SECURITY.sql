@@ -1,40 +1,27 @@
 
 -- ======================================================
--- REPARO DE SEGURANÇA E ESTRUTURA NEXERO
--- Rode este script no SQL Editor do Supabase
+-- REPARO DEFINITIVO DE RLS - NEXERO
 -- ======================================================
 
--- 1. GARANTIR COLUNAS DE SEGURANÇA
--- Adiciona a coluna user_id se ela não existir em cada tabela
+-- 1. LIMPEZA TOTAL DE POLÍTICAS EXISTENTES (Evita conflitos de nomes)
 DO $$ 
+DECLARE 
+    pol record;
 BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'products' AND COLUMN_NAME = 'user_id') THEN
-        ALTER TABLE products ADD COLUMN user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'clients' AND COLUMN_NAME = 'user_id') THEN
-        ALTER TABLE clients ADD COLUMN user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'orders' AND COLUMN_NAME = 'user_id') THEN
-        ALTER TABLE orders ADD COLUMN user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'transactions' AND COLUMN_NAME = 'user_id') THEN
-        ALTER TABLE transactions ADD COLUMN user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
-    END IF;
+    FOR pol IN (SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public') 
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol.policyname, pol.tablename);
+    END LOOP;
 END $$;
 
--- 2. RESET DE POLÍTICAS (LIMPEZA)
--- Removemos políticas antigas que podem estar conflitando
-DROP POLICY IF EXISTS "Usuários gerenciam seus produtos" ON products;
-DROP POLICY IF EXISTS "Usuários gerenciam seus clientes" ON clients;
-DROP POLICY IF EXISTS "Usuários gerenciam seus pedidos" ON orders;
-DROP POLICY IF EXISTS "Usuários gerenciam itens de seus pedidos" ON order_items;
-DROP POLICY IF EXISTS "Usuários gerenciam suas transações" ON transactions;
-DROP POLICY IF EXISTS "Usuários gerenciam suas sequências" ON order_sequences;
+-- 2. GARANTIR ESTRUTURA DE COLUNAS
+-- Adicionamos a coluna e garantimos que ela tenha o valor do usuário atual por padrão
+ALTER TABLE products ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
 
--- 3. REATIVAÇÃO DO RLS
+-- 3. HABILITAR RLS EM TODAS AS TABELAS
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
@@ -42,21 +29,39 @@ ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_sequences ENABLE ROW LEVEL SECURITY;
 
--- 4. CRIAÇÃO DE NOVAS POLÍTICAS LIMPAS
--- Estas políticas permitem TUDO (SELECT, INSERT, UPDATE, DELETE) desde que o user_id seja do dono
+-- 4. CRIAR POLÍTICAS "AUTORIZADO TOTAL"
+-- Permite todas as operações se o user_id bater com o ID do usuário logado
 
-CREATE POLICY "policy_products_all" ON products FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "policy_clients_all" ON clients FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "policy_orders_all" ON orders FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "policy_transactions_all" ON transactions FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "policy_sequences_all" ON order_sequences FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- Produtos
+CREATE POLICY "products_owner_all" ON products FOR ALL TO authenticated 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);
 
--- Para itens de pedido, liberamos se o pedido pai pertencer ao usuário
-CREATE POLICY "policy_order_items_all" ON order_items FOR ALL USING (
+-- Clientes
+CREATE POLICY "clients_owner_all" ON clients FOR ALL TO authenticated 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);
+
+-- Pedidos
+CREATE POLICY "orders_owner_all" ON orders FOR ALL TO authenticated 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);
+
+-- Transações
+CREATE POLICY "transactions_owner_all" ON transactions FOR ALL TO authenticated 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);
+
+-- Itens de Pedido (Acesso via Pedido Pai)
+CREATE POLICY "order_items_owner_all" ON order_items FOR ALL TO authenticated 
+USING (
+    EXISTS (SELECT 1 FROM orders WHERE orders.id = order_items.order_id AND orders.user_id = auth.uid())
+)
+WITH CHECK (
     EXISTS (SELECT 1 FROM orders WHERE orders.id = order_items.order_id AND orders.user_id = auth.uid())
 );
 
--- 5. GARANTIR TABELA DE SEQUÊNCIAS
+-- Sequências de Pedido
 CREATE TABLE IF NOT EXISTS order_sequences (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid REFERENCES auth.users(id) NOT NULL UNIQUE,
@@ -64,5 +69,6 @@ CREATE TABLE IF NOT EXISTS order_sequences (
     updated_at timestamp with time zone DEFAULT now()
 );
 ALTER TABLE order_sequences ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "policy_sequences_all" ON order_sequences;
-CREATE POLICY "policy_sequences_all" ON order_sequences FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "sequences_owner_all" ON order_sequences FOR ALL TO authenticated 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);

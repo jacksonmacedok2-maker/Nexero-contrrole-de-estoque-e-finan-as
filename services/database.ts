@@ -57,19 +57,32 @@ export const db = {
       return localStore.get(STORAGE_KEYS.CLIENTS);
     },
     async create(client: Partial<Client>, isSyncing = false) {
-      const { id, user_id, ...cleanClient } = client as any;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Usuário não autenticado");
+
+      // Limpeza profunda do objeto para não enviar lixo ao Supabase
+      const insertData = {
+        name: client.name,
+        cnpj_cpf: client.cnpj_cpf,
+        email: client.email,
+        phone: client.phone,
+        address: client.address,
+        credit_limit: client.credit_limit || 0,
+        type: client.type,
+        user_id: session.user.id
+      };
+
       if (!isSyncing) {
         const current = localStore.get(STORAGE_KEYS.CLIENTS);
-        localStore.set(STORAGE_KEYS.CLIENTS, [...current, { ...client, id: 'temp_' + Date.now() }]);
+        localStore.set(STORAGE_KEYS.CLIENTS, [...current, { ...insertData, id: 'temp_' + Date.now() }]);
       }
+
       if (navigator.onLine) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) throw new Error("Sessão expirada.");
-        const { data, error } = await supabase.from('clients').insert([{ ...cleanClient, user_id: session.user.id }]).select();
+        const { data, error } = await supabase.from('clients').insert([insertData]).select();
         if (error) throw error;
         return data[0];
       } else if (!isSyncing) {
-        localStore.addToQueue('CLIENT', cleanClient);
+        localStore.addToQueue('CLIENT', insertData);
       }
     }
   },
@@ -87,19 +100,35 @@ export const db = {
       return localStore.get(STORAGE_KEYS.PRODUCTS);
     },
     async create(product: Partial<Product>, isSyncing = false) {
-      const { id, user_id, ...cleanProduct } = product as any;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Usuário não autenticado");
+
+      // Mapeamento explícito para garantir que NENHUM campo ID ou USER_ID antigo seja enviado
+      const insertData = {
+        name: product.name,
+        sku: product.sku,
+        price: product.price,
+        stock: product.stock,
+        min_stock: product.min_stock,
+        category: product.category,
+        image_url: product.image_url,
+        user_id: session.user.id
+      };
+
       if (!isSyncing) {
         const current = localStore.get(STORAGE_KEYS.PRODUCTS);
-        localStore.set(STORAGE_KEYS.PRODUCTS, [...current, { ...product, id: 'temp_' + Date.now() }]);
+        localStore.set(STORAGE_KEYS.PRODUCTS, [...current, { ...insertData, id: 'temp_' + Date.now() }]);
       }
+
       if (navigator.onLine) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) throw new Error("Sessão expirada.");
-        const { data, error } = await supabase.from('products').insert([{ ...cleanProduct, user_id: session.user.id }]).select();
-        if (error) throw error;
+        const { data, error } = await supabase.from('products').insert([insertData]).select();
+        if (error) {
+          console.error("Erro RLS Detalhado:", error);
+          throw error;
+        }
         return data[0];
       } else if (!isSyncing) {
-        localStore.addToQueue('PRODUCT', cleanProduct);
+        localStore.addToQueue('PRODUCT', insertData);
       }
     }
   },
@@ -142,10 +171,10 @@ export const db = {
     },
 
     async create(order: Partial<Order>, items: OrderItem[]) {
-      if (navigator.onLine) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) throw new Error("Não autenticado");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Não autenticado");
 
+      if (navigator.onLine) {
         const code = await this.getNextCode();
 
         const { data: orderData, error: orderError } = await supabase
