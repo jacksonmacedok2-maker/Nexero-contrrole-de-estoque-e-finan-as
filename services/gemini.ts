@@ -1,9 +1,6 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
-// Fix: Initialize GoogleGenAI correctly with apiKey property and remove fallback to ensure it uses the environment variable exclusively.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 function decode(base64: string) {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -34,7 +31,9 @@ async function decodeAudioData(
 }
 
 export const geminiService = {
+  // Fix: Create GoogleGenAI instance right before the API call to ensure up-to-date API key usage.
   async getSalesInsights(stats: any) {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `Analise os seguintes dados de vendas de hoje para uma pequena empresa:
     Vendas do dia: R$ ${stats.dailySales}
     Receita mensal: R$ ${stats.monthlyRevenue}
@@ -57,7 +56,9 @@ export const geminiService = {
     }
   },
 
+  // Fix: Create GoogleGenAI instance right before the API call to ensure up-to-date API key usage.
   async speakInsight(text: string) {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     try {
       const response = await ai.models.generateContent({
         // Fix: Use the correct model for text-to-speech tasks.

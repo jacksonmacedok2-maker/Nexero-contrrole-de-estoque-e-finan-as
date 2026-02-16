@@ -1,6 +1,6 @@
 {
-  "name": "VendaFlow Pro",
-  "description": "Sistema completo de gestão de vendas, estoque e financeiro com inteligência artificial e funcionamento offline. Ideal para representantes comerciais, distribuidores e varejo.",
+  "name": "Nexero",
+  "description": "Plataforma Enterprise de gestão de vendas e inteligência comercial. Infraestrutura de alta performance com IA Gemini.",
   "requestFramePermissions": [
     "microphone"
   ]

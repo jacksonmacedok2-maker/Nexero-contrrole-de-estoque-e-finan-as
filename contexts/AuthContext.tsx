@@ -6,20 +6,17 @@ import { supabase } from '../services/supabase';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, metadata: any) => Promise<void>;
+  signUp: (email: string, password: string, metadata: any) => Promise<boolean>;
   logout: () => void;
   refreshSession: () => Promise<void>;
   isAuthenticated: boolean;
   hasPermission: (permission: Permission) => boolean;
-  isVerifying: boolean;
-  setIsVerifying: (val: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,10 +30,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Escutar mudanças no estado de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`Auth Event: ${event}`);
       if (session?.user) {
         updateUserState(session.user);
-        setIsVerifying(false);
       } else {
         setUser(null);
       }
@@ -62,7 +57,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
     if (data.user) {
       updateUserState(data.user);
-      setIsVerifying(false);
     }
   };
 
@@ -71,10 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string, metadata: any) => {
-    // Garantir que a URL de redirecionamento seja válida e não nula
-    const redirectUrl = window.location.origin || `${window.location.protocol}//${window.location.host}`;
-    
+  const signUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -83,16 +74,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...metadata,
           role: UserRole.ADMIN,
           permissions: ['FINANCE', 'INVENTORY', 'PRODUCTS', 'ORDERS', 'POS', 'SETTINGS', 'REPORTS', 'CLIENTS']
-        },
-        emailRedirectTo: redirectUrl
+        }
       }
     });
 
     if (error) throw error;
     
-    if (data.user && !data.session) {
-      setIsVerifying(true);
-    }
+    // Retorna true se precisar de confirmação (user existe mas sem sessão)
+    // Retorna false se logou direto (sessão já existe)
+    return !!(data.user && !data.session);
   };
 
   const logout = async () => {
@@ -111,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Conectando ao VendaFlow Cloud...</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] animate-pulse">Conectando ao Nexero Cloud...</p>
         </div>
       </div>
     );
@@ -125,9 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout, 
       refreshSession,
       isAuthenticated: !!user, 
-      hasPermission,
-      isVerifying,
-      setIsVerifying
+      hasPermission
     }}>
       {children}
     </AuthContext.Provider>
