@@ -20,7 +20,6 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
-  // Novos estados para visibilidade de senha no cadastro
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
 
@@ -81,7 +80,7 @@ const Login: React.FC = () => {
       setResendTimer(60);
     } catch (err: any) {
       if (err.message?.includes('rate limit')) {
-        setError('Muitas tentativas. O Supabase limita o envio de e-mails para 3 por hora no plano gratuito.');
+        setError('Muitas tentativas de envio de e-mail em um curto período. Por favor, aguarde alguns minutos ou verifique sua pasta de spam.');
       } else {
         setError(err.message || 'Erro ao criar conta. Tente novamente mais tarde.');
       }
@@ -93,11 +92,12 @@ const Login: React.FC = () => {
     if (resendTimer > 0) return;
     setIsLoading(true);
     try {
+      const redirectUrl = window.location.origin || `${window.location.protocol}//${window.location.host}`;
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: signupData.email,
         options: {
-          emailRedirectTo: window.location.origin
+          emailRedirectTo: redirectUrl
         }
       });
       if (error) throw error;
@@ -143,8 +143,6 @@ const Login: React.FC = () => {
   };
 
   const isCnpjReady = documentType === 'CNPJ' && signupData.document.replace(/\D/g, '').length === 14;
-  
-  // Verificação de igualdade das senhas para feedback visual
   const passwordsMatch = signupData.password === signupData.confirmPassword;
   const showConfirmError = signupData.confirmPassword.length > 0 && !passwordsMatch;
 
@@ -177,7 +175,7 @@ const Login: React.FC = () => {
               <div className="space-y-1">
                 <h4 className="text-xs font-black text-amber-900 dark:text-amber-200 uppercase tracking-widest">Atenção ao Spam</h4>
                 <p className="text-xs text-amber-800 dark:text-amber-300 font-bold leading-relaxed">
-                  Se o e-mail não aparecer em 1 minuto, verifique obrigatoriamente sua pasta de <span className="underline decoration-2 underline-offset-2">Lixo Eletrônico ou Spam</span>.
+                  Verifique obrigatoriamente sua pasta de <span className="underline decoration-2 underline-offset-2">Lixo Eletrônico ou Spam</span> caso o e-mail não apareça em instantes.
                 </p>
               </div>
             </div>
@@ -215,7 +213,7 @@ const Login: React.FC = () => {
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center justify-center gap-2">
               <HelpCircle size={12} /> Ainda com problemas?
             </p>
-            <p className="text-[9px] text-slate-500 mt-1">Alguns provedores corporativos podem bloquear e-mails automáticos do Supabase. Tente usar um Gmail ou Outlook pessoal.</p>
+            <p className="text-[9px] text-slate-500 mt-1">Como você agora possui um plano profissional, considere configurar o SMTP personalizado no painel do Supabase para entregabilidade imediata.</p>
           </div>
 
           <button onClick={() => setIsVerifying(false)} className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] hover:text-indigo-500 transition-colors">Voltar para o cadastro</button>
@@ -241,7 +239,7 @@ const Login: React.FC = () => {
               <Sparkles size={14} className="text-indigo-300"/> Cloud Infrastructure
             </div>
             <h2 className="text-6xl font-black leading-[1.1] tracking-tight">Alta performance <br/><span className="text-indigo-300">Garantida.</span></h2>
-            <p className="text-xl text-indigo-100/80 font-medium max-w-md leading-relaxed">Conectado diretamente ao seu banco de dados PostgreSQL seguro.</p>
+            <p className="text-xl text-indigo-100/80 font-medium max-w-md leading-relaxed">Conectado diretamente ao seu banco de dados PostgreSQL seguro e escalável.</p>
           </div>
           <div className="flex items-center gap-8">
             <div className="text-indigo-200/50 text-xs font-bold uppercase tracking-widest">© 2024 VendaFlow Pro</div>
@@ -261,7 +259,7 @@ const Login: React.FC = () => {
               {isLogin ? 'Login Seguro' : 'Inicie seu Cadastro'}
             </h3>
             <p className="text-slate-500 dark:text-slate-400 font-medium">
-              {isLogin ? 'Painel autenticado via Supabase Cloud.' : 'Cadastre sua empresa e configure seu banco de dados.'}
+              {isLogin ? 'Painel autenticado via Supabase Cloud.' : 'Cadastre sua empresa no ambiente de alta performance.'}
             </p>
           </div>
 

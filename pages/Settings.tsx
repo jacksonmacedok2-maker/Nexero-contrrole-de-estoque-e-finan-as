@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Building2, Receipt, Users, ShoppingBag, Box, Store, Wallet, Bell, Link2, Monitor, ChevronRight, Save, CheckCircle2, UserPlus, Trash2, Edit2, X, Lock, MailCheck, ShieldCheck, ExternalLink, Info } from 'lucide-react';
+import { Building2, Receipt, Users, ShoppingBag, Box, Store, Wallet, Bell, Link2, Monitor, ChevronRight, Save, CheckCircle2, UserPlus, Trash2, Edit2, X, Lock, MailCheck, ShieldCheck, ExternalLink, Info, Copy, Globe } from 'lucide-react';
 import { useAppSettings, ThemeMode } from '../contexts/AppSettingsContext';
 import { Language } from '../i18n/translations';
 import { User, UserRole, Permission } from '../types';
@@ -156,12 +156,55 @@ const Settings: React.FC = () => {
 };
 
 const EmailDeliveryGuide: React.FC = () => {
+  const currentUrl = window.location.origin;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(currentUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
       <SectionHeader 
-        title="Guia de Entregabilidade de E-mail" 
-        subtitle="Siga estes passos no painel do Supabase para garantir que seus e-mails não caiam no SPAM." 
+        title="Configuração de E-mail & Autenticação" 
+        subtitle="Siga estes passos para garantir que o link de confirmação funcione no seu celular." 
       />
+
+      <div className="bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20 p-6 rounded-3xl space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+            <Globe size={20} />
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-800 dark:text-white">URL de Redirecionamento</h4>
+            <p className="text-xs text-slate-500">Copie esta URL e cole no painel do Supabase.</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-white dark:bg-slate-900 border dark:border-slate-700 p-3 rounded-xl font-mono text-xs text-slate-600 dark:text-slate-300 break-all">
+            {currentUrl}
+          </div>
+          <button 
+            onClick={handleCopy}
+            className={`p-3 rounded-xl transition-all flex items-center gap-2 font-bold text-xs uppercase ${copied ? 'bg-emerald-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+          >
+            {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+            {copied ? 'Copiado!' : 'Copiar URL'}
+          </button>
+        </div>
+
+        <div className="p-4 bg-white/50 dark:bg-slate-800/50 rounded-2xl border dark:border-slate-700 space-y-3">
+          <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Onde colar no Supabase?</h5>
+          <ol className="text-xs text-slate-600 dark:text-slate-400 space-y-2 list-decimal pl-4">
+            <li>Vá em <strong>Authentication > URL Configuration</strong>.</li>
+            <li>No campo <strong>Site URL</strong>, cole o link acima.</li>
+            <li>No campo <strong>Redirect URLs</strong>, adicione também este mesmo link.</li>
+          </ol>
+        </div>
+      </div>
 
       <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/20 p-6 rounded-3xl flex gap-4">
         <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-amber-500/20">
@@ -170,7 +213,7 @@ const EmailDeliveryGuide: React.FC = () => {
         <div>
           <h4 className="text-amber-900 dark:text-amber-400 font-black uppercase text-xs tracking-widest mb-1">Por que cai no spam?</h4>
           <p className="text-sm text-amber-800 dark:text-amber-300/80 leading-relaxed">
-            O Supabase usa um servidor de e-mail compartilhado por padrão. Como milhares de apps usam o mesmo servidor, a "reputação" é baixa para provedores como Gmail e Outlook. Para resolver, você deve usar seu próprio domínio e servidor SMTP.
+            O Supabase usa um servidor compartilhado por padrão. Para resolver definitivamente, você deve usar seu próprio servidor SMTP (Resend ou SendGrid).
           </p>
         </div>
       </div>
@@ -182,28 +225,8 @@ const EmailDeliveryGuide: React.FC = () => {
             <h4 className="font-bold text-slate-800 dark:text-white">Configure um SMTP Próprio</h4>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Recomendamos o uso do <strong>Resend</strong> ou <strong>SendGrid</strong>. No painel do Supabase:
+            No painel do Supabase, habilite <strong>Custom SMTP</strong> e insira as credenciais do <strong>Resend</strong>.
           </p>
-          <ul className="text-xs text-slate-500 space-y-2 list-disc pl-4 font-medium">
-            <li>Vá em <strong>Project Settings > Authentication</strong>.</li>
-            <li>Habilite <strong>Custom SMTP</strong>.</li>
-            <li>Insira as credenciais (Host, Port, User, Password) do seu provedor.</li>
-          </ul>
-        </div>
-
-        <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border dark:border-slate-800 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">2</div>
-            <h4 className="font-bold text-slate-800 dark:text-white">Autentique seu Domínio (DNS)</h4>
-          </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            No gerenciador de DNS do seu domínio (ex: Cloudflare, GoDaddy), adicione estes 3 registros cruciais:
-          </p>
-          <div className="space-y-3">
-            <DnsRecordCard type="SPF" description="Autoriza servidores a enviar e-mails em seu nome." />
-            <DnsRecordCard type="DKIM" description="Assina digitalmente o e-mail, provando que ele é autêntico." />
-            <DnsRecordCard type="DMARC" description="Instrui o Gmail/Outlook a confiar apenas em e-mails assinados." />
-          </div>
         </div>
 
         <div className="p-6 bg-indigo-600 text-white rounded-3xl shadow-xl shadow-indigo-600/20 space-y-4">
@@ -217,7 +240,7 @@ const EmailDeliveryGuide: React.FC = () => {
             </a>
           </div>
           <p className="text-sm text-indigo-100 leading-relaxed">
-            Se você estiver usando o plano gratuito do Supabase, você tem um limite de 3 e-mails por hora. Se você configurar o SMTP próprio, esse limite é removido e você passa a responder pela sua própria entregabilidade.
+            Após configurar o SMTP e as URLs de redirecionamento, os e-mails chegarão instantaneamente e o link funcionará em qualquer dispositivo (PC ou Celular).
           </p>
         </div>
       </div>
@@ -236,8 +259,6 @@ const DnsRecordCard = ({ type, description }: { type: string, description: strin
     </div>
   </div>
 );
-
-// --- RESTO DOS COMPONENTES (UsersSettingsForm, UserModal, etc permanecem iguais) ---
 
 const UsersSettingsForm: React.FC = () => {
   const { t } = useAppSettings();

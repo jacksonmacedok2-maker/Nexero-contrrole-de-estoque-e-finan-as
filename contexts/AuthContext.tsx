@@ -72,6 +72,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, metadata: any) => {
+    // Garantir que a URL de redirecionamento seja válida e não nula
+    const redirectUrl = window.location.origin || `${window.location.protocol}//${window.location.host}`;
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -81,13 +84,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: UserRole.ADMIN,
           permissions: ['FINANCE', 'INVENTORY', 'PRODUCTS', 'ORDERS', 'POS', 'SETTINGS', 'REPORTS', 'CLIENTS']
         },
-        emailRedirectTo: window.location.origin
+        emailRedirectTo: redirectUrl
       }
     });
 
     if (error) throw error;
     
-    // Supabase retorna sessão null se o e-mail de confirmação for necessário
     if (data.user && !data.session) {
       setIsVerifying(true);
     }
