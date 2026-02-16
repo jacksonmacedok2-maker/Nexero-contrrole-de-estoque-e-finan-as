@@ -1,6 +1,6 @@
 {
   "name": "Nexero",
-  "description": "Plataforma Enterprise de gestão de vendas e inteligência comercial. Infraestrutura de alta performance com IA Gemini.",
+  "description": "Plataforma Enterprise com sincronização híbrida Cloud/Offline. Gestão resiliente com IA Gemini e persistência local.",
   "requestFramePermissions": [
     "microphone"
   ]

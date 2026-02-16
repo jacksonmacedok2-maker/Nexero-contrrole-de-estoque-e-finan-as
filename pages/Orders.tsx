@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Download, MoreHorizontal, FileText, Send, User, Loader2, ShoppingCart } from 'lucide-react';
+import { Plus, Search, Filter, Download, MoreHorizontal, FileText, Send, User, Loader2, ShoppingCart, Printer } from 'lucide-react';
 import { formatCurrency, formatDate, formatTime } from '../utils/helpers';
 import { OrderStatus } from '../types';
 import { db } from '../services/database';
+import { printService } from '../services/print';
 
 const Orders: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,6 +26,19 @@ const Orders: React.FC = () => {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const handlePrintOrder = async (order: any) => {
+    // Para re-impressão, precisamos dos itens. 
+    // Como getAll não traz itens detalhados por padrão na listagem, 
+    // idealmente buscaríamos os itens do pedido específico.
+    try {
+      // Mock de itens caso não estejam no join, ou busca via API
+      const items = order.order_items || []; 
+      await printService.printReceipt(order, items);
+    } catch (e) {
+      alert("Erro ao preparar impressão.");
+    }
+  };
 
   const filteredOrders = orders.filter(o => 
     (o.clients?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -115,6 +129,12 @@ const Orders: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => handlePrintOrder(order)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10" title="Imprimir Recibo"
+                        >
+                          <Printer size={16} />
+                        </button>
                         <button className="p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10" title="Compartilhar WhatsApp">
                           <Send size={16} />
                         </button>

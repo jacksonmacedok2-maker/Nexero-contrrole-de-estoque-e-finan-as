@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata: any) => Promise<boolean>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => void;
   refreshSession: () => Promise<void>;
   isAuthenticated: boolean;
@@ -80,9 +81,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) throw error;
     
-    // Retorna true se precisar de confirmação (user existe mas sem sessão)
-    // Retorna false se logou direto (sessão já existe)
+    // Se a confirmação de e-mail estiver desativada, data.session existirá imediatamente
+    if (data.session) {
+      updateUserState(data.user);
+      return false; 
+    }
+    
     return !!(data.user && !data.session);
+  };
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) throw error;
   };
 
   const logout = async () => {
@@ -112,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       login, 
       signUp, 
+      resetPassword,
       logout, 
       refreshSession,
       isAuthenticated: !!user, 

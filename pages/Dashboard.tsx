@@ -1,16 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, ShoppingBag, Users, AlertCircle, Sparkles, Volume2, Loader2, ShieldCheck, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, ShoppingBag, Users, AlertCircle, Loader2, ShieldCheck, Zap } from 'lucide-react';
 import { formatCurrency } from '../utils/helpers';
-import { geminiService } from '../services/gemini';
 import { db } from '../services/database';
 import { useAuth } from '../contexts/AuthContext';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const [insight, setInsight] = useState<string>('Analisando seus dados...');
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [stats, setStats] = useState({
     dailySales: 0,
     monthlyRevenue: 0,
@@ -24,9 +21,6 @@ const Dashboard: React.FC = () => {
       try {
         const dashboardStats = await db.getDashboardStats();
         setStats(prev => ({ ...prev, ...dashboardStats }));
-        
-        const text = await geminiService.getSalesInsights(dashboardStats);
-        setInsight(text || "Pronto para vender mais hoje?");
       } catch (err) {
         console.error("Erro ao carregar dashboard:", err);
       } finally {
@@ -35,12 +29,6 @@ const Dashboard: React.FC = () => {
     };
     loadData();
   }, []);
-
-  const handleSpeak = async () => {
-    setIsSpeaking(true);
-    await geminiService.speakInsight(insight);
-    setIsSpeaking(false);
-  };
 
   if (loading) {
     return (
@@ -67,22 +55,14 @@ const Dashboard: React.FC = () => {
           </div>
           <p className="text-slate-500 dark:text-slate-400 font-medium italic">Monitorando sua infraestrutura em tempo real.</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl flex items-start gap-4 max-w-md shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:border-indigo-500/30">
-          <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-indigo-600/20">
-            <Sparkles className="text-white" size={20} />
+        
+        <div className="hidden md:flex items-center gap-4">
+          <div className="text-right">
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Status do Sistema</p>
+             <p className="text-xs font-bold text-emerald-500 uppercase tracking-tight">Cloud Online</p>
           </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em]">IA Insights</p>
-              <button 
-                onClick={handleSpeak}
-                disabled={isSpeaking}
-                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all text-slate-400 hover:text-indigo-600 disabled:opacity-50"
-              >
-                <Volume2 size={16} />
-              </button>
-            </div>
-            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-bold italic">"{insight}"</p>
+          <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-indigo-600 shadow-inner">
+            <Zap size={24} fill="currentColor" />
           </div>
         </div>
       </div>

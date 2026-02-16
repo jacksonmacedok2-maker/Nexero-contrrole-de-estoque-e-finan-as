@@ -12,17 +12,32 @@ import Clients from './pages/Clients';
 import Login from './pages/Login';
 import { AppSettingsProvider } from './contexts/AppSettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { db } from './services/database';
+import { Loader2 } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState('/');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
   const { isAuthenticated, logout, user, hasPermission } = useAuth();
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = async () => {
+      setIsOnline(true);
+      setIsSyncing(true);
+      await db.syncPendingData();
+      setIsSyncing(false);
+    };
     const handleOffline = () => setIsOnline(false);
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Tentar sincronizar ao montar se estiver online
+    if (navigator.onLine) {
+      db.syncPendingData();
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -58,6 +73,12 @@ const AppContent: React.FC = () => {
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab} isOnline={isOnline} onLogout={logout}>
+      {isSyncing && (
+        <div className="fixed bottom-8 right-8 z-[100] bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+          <Loader2 className="animate-spin" size={18} />
+          <span className="text-[10px] font-black uppercase tracking-widest">Sincronizando Dados...</span>
+        </div>
+      )}
       {renderContent()}
     </Layout>
   );
