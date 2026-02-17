@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { CheckCircle2, Monitor, ArrowRight, Smartphone, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, ArrowRight, PartyPopper, ShieldCheck, Smartphone, Sparkles } from 'lucide-react';
 
 interface AuthConfirmedProps {
   setActiveTab: (tab: string) => void;
@@ -12,62 +12,62 @@ const AuthConfirmed: React.FC<AuthConfirmedProps> = ({ setActiveTab }) => {
   };
 
   return (
-    <div className="min-h-[85vh] flex flex-col items-center justify-center p-4 text-center animate-in fade-in zoom-in-95 duration-1000">
-      {/* Icone de Sucesso */}
-      <div className="relative mb-6 md:mb-10">
-        <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-2xl animate-pulse" />
-        <div className="relative w-20 h-20 md:w-28 md:h-28 bg-white dark:bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl flex items-center justify-center border border-slate-100 dark:border-slate-800">
-          <div className="w-14 h-14 md:w-20 md:h-20 bg-emerald-500 rounded-[1.4rem] md:rounded-[1.8rem] flex items-center justify-center text-white">
-            <CheckCircle2 size={32} md:size={48} strokeWidth={2.5} />
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-slate-950 animate-in fade-in zoom-in-95 duration-700">
+      {/* Elementos Decorativos de Fundo */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
+        <div className="absolute top-10 left-10 text-brand-500 animate-bounce delay-75"><Sparkles size={24} /></div>
+        <div className="absolute bottom-20 right-10 text-brand-500 animate-bounce delay-300"><Sparkles size={32} /></div>
+      </div>
+
+      {/* Badge de Verificação */}
+      <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-full mb-8">
+        <ShieldCheck size={16} className="text-emerald-500" />
+        <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em]">Identidade Validada</span>
+      </div>
+
+      {/* Icone Principal */}
+      <div className="relative mb-10">
+        <div className="absolute inset-0 bg-emerald-500/30 rounded-full blur-3xl animate-pulse scale-150" />
+        <div className="relative w-32 h-32 bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl flex items-center justify-center border border-slate-100 dark:border-slate-800">
+          <div className="w-24 h-24 bg-emerald-500 rounded-[2.2rem] flex items-center justify-center text-white shadow-xl shadow-emerald-500/40">
+            <PartyPopper size={56} strokeWidth={2.5} />
           </div>
         </div>
       </div>
       
-      {/* Textos Principais */}
-      <div className="space-y-4 mb-8 md:mb-12">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-full">
-           <ShieldCheck size={12} className="text-emerald-500" />
-           <span className="text-[8px] md:text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">E-mail verificado</span>
-        </div>
-        
-        <h2 className="text-3xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">
-          Conta <br className="md:hidden"/> <span className="text-brand-600">Ativada.</span>
+      {/* Mensagem de Sucesso */}
+      <div className="space-y-4 mb-12 relative z-10">
+        <h2 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">
+          Parabéns! <br/> <span className="text-brand-600">Conta Ativada.</span>
         </h2>
         
-        <p className="text-slate-500 dark:text-slate-400 font-bold max-w-xs mx-auto leading-relaxed italic text-sm md:text-base">
-          Sua infraestrutura Nexero está pronta. O acesso agora é exclusivo para administradores.
+        <p className="text-slate-500 dark:text-slate-400 font-bold max-w-sm mx-auto leading-relaxed italic text-base">
+          Seu e-mail foi verificado com sucesso. Sua instância Nexero já está pronta para operar na nuvem.
         </p>
       </div>
 
-      {/* Action Box */}
-      <div className="w-full max-w-sm bg-slate-900 dark:bg-white rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-2xl text-left space-y-6 relative overflow-hidden group">
-        <div className="relative z-10 space-y-4 md:space-y-6">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-brand-600/20">
-              <Monitor size={20} />
-            </div>
-            <div>
-              <p className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Passo Final</p>
-              <p className="text-xs font-bold text-white dark:text-slate-900 leading-tight italic">
-                Recomendamos o uso em Desktop para gestão de relatórios pesados.
-              </p>
-            </div>
-          </div>
+      {/* Botão de Ação - Garantido visível no mobile */}
+      <div className="w-full max-w-sm space-y-4">
+        <button 
+          onClick={handleGoToLogin}
+          className="w-full bg-slate-900 dark:bg-white dark:text-slate-900 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.25em] shadow-2xl transition-all flex items-center justify-center gap-4 active:scale-95 group"
+        >
+          Acessar Plataforma 
+          <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+        </button>
 
-          <button 
-            onClick={handleGoToLogin}
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white py-4 md:py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-brand-600/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
-          >
-            Acessar Login <ArrowRight size={16} />
-          </button>
+        <div className="flex items-center justify-center gap-2 text-slate-400 py-4">
+           <Smartphone size={16} className="opacity-50" />
+           <p className="text-[9px] font-black uppercase tracking-[0.2em]">Otimizado para controle via Celular</p>
         </div>
       </div>
 
-      {/* Footer Mobile Optimized */}
-      <div className="mt-8 space-y-4">
-        <div className="flex items-center justify-center gap-2 text-slate-400">
-           <Smartphone size={14} className="opacity-50" />
-           <p className="text-[8px] font-black uppercase tracking-widest">Controle móvel habilitado via PDV Nexero.</p>
+      {/* Rodapé de Segurança */}
+      <div className="mt-auto pt-12">
+        <div className="flex items-center justify-center gap-4">
+          <div className="h-px w-8 bg-slate-200 dark:bg-slate-800" />
+          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.4em] italic">Nexero Enterprise System</p>
+          <div className="h-px w-8 bg-slate-200 dark:bg-slate-800" />
         </div>
       </div>
     </div>
