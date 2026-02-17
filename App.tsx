@@ -17,7 +17,6 @@ import AuthError from './pages/AuthError';
 import { AppSettingsProvider } from './contexts/AppSettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { db } from './services/database';
-// Fixed: Added ShieldCheck to the lucide-react imports
 import { Loader2, ShieldCheck } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -28,14 +27,13 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const handleLocationChange = () => {
-      // Normaliza o path para evitar problemas com barras no final
       let path = window.location.pathname;
       if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
       setActiveTab(path);
     };
 
     window.addEventListener('popstate', handleLocationChange);
-    handleLocationChange(); // Verifica no mount inicial
+    handleLocationChange();
 
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
@@ -68,18 +66,36 @@ const AppContent: React.FC = () => {
   }, []);
 
   const renderContent = () => {
-    // Normalização para facilitar o switch case
     const path = activeTab.toLowerCase();
+    
+    // DETECÇÃO DE PARÂMETROS DE AUTH (Gmail Redirect)
+    const queryParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    
+    const hasCode = queryParams.has('code');
+    const hasToken = hashParams.has('access_token');
+    const hasAuthError = queryParams.has('error') || hashParams.has('error');
+    
+    // Se houver erro de autenticação vindo do Supabase
+    if (hasAuthError && !path.includes('/auth/error')) {
+      return <AuthError setActiveTab={navigateTo} />;
+    }
 
-    // Rotas de Autenticação (Prioridade total para evitar 404)
-    if (path.includes('/auth/callback')) return <AuthCallback setActiveTab={navigateTo} />;
+    // Fluxo de Confirmação de E-mail (Prioridade Total)
+    if ((hasCode || hasToken) && !path.includes('/auth/confirmed') && !path.includes('/auth/error')) {
+      return <AuthCallback setActiveTab={navigateTo} />;
+    }
+
+    // Rotas de Estado Final
     if (path.includes('/auth/confirmed')) return <AuthConfirmed setActiveTab={navigateTo} />;
     if (path.includes('/auth/error')) return <AuthError setActiveTab={navigateTo} />;
 
-    // Bloqueio se não autenticado
-    if (!isAuthenticated) return <Login />;
+    // Bloqueio se não estiver logado e não for rota de auth
+    if (!isAuthenticated) {
+      return <Login />;
+    }
 
-    // Rotas do App
+    // Rotas do Aplicativo Autenticado
     switch (path) {
       case '/':
       case '/dashboard':
@@ -100,17 +116,19 @@ const AppContent: React.FC = () => {
         return hasPermission('REPORTS') ? <Reports /> : <AccessDenied />;
       case '/settings':
         return hasPermission('SETTINGS') ? <Settings /> : <AccessDenied />;
-      case '/login':
-        return <Login />;
       default:
-        // Fallback inteligente para Dashboard se estiver logado
-        if (isAuthenticated) return <Dashboard />;
-        return <NotFound setActiveTab={navigateTo} />;
+        return <Dashboard />; // Fallback seguro
     }
   };
 
-  // Layout especial para Auth
-  if (activeTab.includes('/auth/') || (!isAuthenticated && activeTab === '/login')) {
+  // Determinar se deve mostrar o Layout (Menu lateral, etc)
+  const path = activeTab.toLowerCase();
+  const isAuthPage = path.includes('/auth/') || !isAuthenticated;
+  const queryParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.substring(1));
+  const hasAuthParams = queryParams.has('code') || hashParams.has('access_token');
+
+  if (isAuthPage || hasAuthParams) {
     return (
       <div className="min-h-screen bg-white dark:bg-slate-950">
         {renderContent()}
@@ -140,17 +158,6 @@ const AccessDenied = () => (
     </div>
     <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic">Acesso Restrito</h2>
     <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-2 italic font-medium">Você não possui as permissões necessárias para este módulo.</p>
-  </div>
-);
-
-const NotFound = ({ setActiveTab }: any) => (
-  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
-    <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 mb-6">
-      <span className="text-4xl">🚧</span>
-    </div>
-    <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic">Página Offline</h2>
-    <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-2 italic font-medium">O endereço solicitado não foi localizado nesta instância.</p>
-    <button onClick={() => setActiveTab('/')} className="mt-6 text-brand-600 font-black uppercase tracking-widest hover:underline">Ir para o Dashboard</button>
   </div>
 );
 

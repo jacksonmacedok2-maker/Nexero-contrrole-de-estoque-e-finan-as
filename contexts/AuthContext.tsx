@@ -23,14 +23,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Detecta se a URL contém parâmetros de autenticação (code ou access_token)
-    const hasAuthParams = 
-      window.location.search.includes('code=') || 
-      window.location.hash.includes('access_token=') ||
-      window.location.pathname.startsWith('/auth/');
+    const queryParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hasAuthParams = queryParams.has('code') || hashParams.has('access_token');
 
     const initAuth = async () => {
-      // Se tiver parâmetros de auth na URL, nós NÃO carregamos o usuário agora.
-      // Deixamos o AuthCallback lidar com isso e deslogar.
+      // Se houver parâmetros de auth, deixamos o App.tsx decidir o que renderizar
       if (!hasAuthParams) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -43,10 +41,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Regra de Ouro: Se estivermos em uma rota /auth/, ignoramos o evento de login automático
-      const isAuthPath = window.location.pathname.startsWith('/auth/');
-      
-      if (session?.user && !isAuthPath) {
+      // Se detectar login ou mudança de estado e NÃO estivermos em fluxo de callback
+      if (session?.user && !window.location.search.includes('code=')) {
         updateUserState(session.user);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -82,6 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
+    // IMPORTANTE: Redirecionar para a URL base SEM subpastas para evitar o erro 404 do servidor de hospedagem
+    const redirectUrl = window.location.origin + '/';
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -91,14 +90,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: UserRole.ADMIN,
           permissions: ['FINANCE', 'INVENTORY', 'PRODUCTS', 'ORDERS', 'POS', 'SETTINGS', 'REPORTS', 'CLIENTS']
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: redirectUrl,
       }
     });
 
     if (error) throw error;
     
-    // Se o Supabase logar direto (ambiente de teste), nós forçamos logout para manter o fluxo
     if (data.session) {
+      // Se já logou direto, fazemos logout para forçar a confirmação visual
       await supabase.auth.signOut();
       return true; 
     }
@@ -107,11 +106,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resendConfirmation = async (email: string) => {
+    const redirectUrl = window.location.origin + '/';
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: redirectUrl,
       }
     });
     if (error) throw error;
@@ -141,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] animate-pulse">Protegendo Sessão...</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] animate-pulse">Sincronizando Segurança...</p>
         </div>
       </div>
     );
