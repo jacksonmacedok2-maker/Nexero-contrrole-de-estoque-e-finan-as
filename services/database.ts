@@ -60,8 +60,6 @@ export const db = {
         .limit(1)
         .maybeSingle();
 
-      // Se der erro ou não houver membership, retornamos o próprio ID do usuário 
-      // como sendo o ID da empresa (Comportamento de OWNER inicial)
       if (error || !data) {
         return session.user.id;
       }
@@ -86,30 +84,42 @@ export const db = {
     async generateInvitation(email: string, role: InviteRole): Promise<Invitation> {
       const { data: { session } } = await supabase.auth.getSession();
       const companyId = await this.getActiveCompanyId();
-      if (!session?.user || !companyId) throw new Error("Não autorizado");
+      if (!session?.user || !companyId) throw new Error("Não autorizado ou sessão expirada.");
 
-      const token = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+      // Mapeamento de cargo UI -> DB (Garante compatibilidade com as constraints da tabela)
+      const roleMap: Record<InviteRole, string> = {
+        'ADMINISTRADOR': 'ADMIN',
+        'VENDEDOR': 'SELLER',
+        'VISUALIZADOR': 'VIEWER'
+      };
+
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
+      // CRITICAL: NÃO enviamos o 'token' aqui. O banco gera gen_random_uuid() no default da coluna.
       const invite = {
         company_id: companyId,
-        invited_email: email,
-        role: role,
+        invited_email: email.trim().toLowerCase(),
+        role: roleMap[role],
         status: 'PENDING',
-        token: token,
         expires_at: expiresAt.toISOString(),
         created_by: session.user.id
       };
 
+      // Uso correto do supabase-js conforme as diretrizes
       const { data, error } = await supabase
         .from('invitations')
-        .insert([invite])
+        .insert(invite)
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Erro ao inserir convite:', error);
+        throw new Error(error.message);
+      }
+      
+      console.log('INVITE CREATED =>', data);
+      return data as Invitation;
     },
 
     async deleteInvitation(id: string) {
@@ -421,7 +431,6 @@ export const db = {
         const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
         if (itemsError) throw itemsError;
 
-        // Fix: Use OrderStatus.COMPLETED enum value for comparison instead of string literal 'COMPLETED'
         if (order.status === OrderStatus.COMPLETED) {
           for (const item of items) {
             const { data: prod } = await supabase.from('products').select('stock').eq('id', item.product_id).single();
@@ -470,7 +479,6 @@ export const db = {
         const today = new Date();
         today.setHours(0,0,0,0);
         const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        // Fix: Use OrderStatus.COMPLETED enum value for query equality check instead of string literal 'COMPLETED'
         const { data: ordersToday } = await supabase.from('orders').select('total_amount').gte('created_at', today.toISOString()).eq('status', OrderStatus.COMPLETED);
         const { data: ordersMonth } = await supabase.from('orders').select('total_amount').gte('created_at', firstDayOfMonth.toISOString()).eq('status', OrderStatus.COMPLETED);
         const { data: productsStock } = await supabase.from('products').select('stock');

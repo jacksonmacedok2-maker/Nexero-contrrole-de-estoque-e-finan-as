@@ -44,7 +44,9 @@ const Team: React.FC = () => {
       setGeneratedLink(link);
       fetchInvitations();
     } catch (err: any) {
-      setError(err.message || 'Erro ao gerar convite.');
+      // Exibe a mensagem de erro real do banco de dados (ex: UUID inválido, restrição de role, etc)
+      console.error('Falha ao gerar convite:', err);
+      setError(err.message || 'Erro inesperado ao gerar convite.');
     } finally {
       setIsGenerating(false);
     }
@@ -75,7 +77,7 @@ const Team: React.FC = () => {
           <p className="text-sm text-slate-500 font-medium italic">Expanda sua operação convidando novos membros.</p>
         </div>
         <button 
-          onClick={() => { setIsModalOpen(true); setGeneratedLink(''); setEmail(''); }}
+          onClick={() => { setIsModalOpen(true); setGeneratedLink(''); setEmail(''); setError(''); }}
           className="bg-brand-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-brand-700 shadow-xl shadow-brand-600/20 active:scale-95 transition-all"
         >
           <UserPlus size={18} /> Convidar Membro
