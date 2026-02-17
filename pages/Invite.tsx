@@ -3,12 +3,19 @@ import React, { useState, useEffect } from 'react';
 import { Mail, ShieldCheck, ArrowRight, Loader2, AlertCircle, CheckCircle2, UserPlus, LogIn, Sparkles, Building2, UserCircle } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { InviteRole } from '../types';
 
 interface InviteProps {
   setActiveTab: (tab: string) => void;
 }
 
 type InviteState = 'IDLE' | 'LOADING' | 'NOT_LOGGED' | 'READY' | 'SUCCESS' | 'ERROR';
+
+const ROLE_DISPLAY: Record<string, string> = {
+  'ADMIN': 'ADMINISTRADOR',
+  'SELLER': 'VENDEDOR',
+  'VIEWER': 'VISUALIZADOR'
+};
 
 const Invite: React.FC<InviteProps> = ({ setActiveTab }) => {
   const { user, isAuthenticated } = useAuth();
@@ -158,7 +165,7 @@ const Invite: React.FC<InviteProps> = ({ setActiveTab }) => {
                     <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">Entrar na Equipe</h3>
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Você foi convidado como <span className="bg-brand-600 text-white px-2 py-0.5 rounded text-[10px] font-black uppercase">{inviteData?.role}</span></p>
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Você foi convidado como <span className="bg-brand-600 text-white px-2 py-0.5 rounded text-[10px] font-black uppercase">{ROLE_DISPLAY[inviteData?.role] || inviteData?.role}</span></p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">Vinculado ao e-mail: {user?.email}</p>
                   </div>
                </div>

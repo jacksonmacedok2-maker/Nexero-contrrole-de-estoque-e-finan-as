@@ -15,7 +15,7 @@ export enum UserRole {
 
 export type Permission = 'FINANCE' | 'INVENTORY' | 'PRODUCTS' | 'ORDERS' | 'POS' | 'SETTINGS' | 'REPORTS' | 'CLIENTS' | 'TEAM';
 
-export type InviteRole = 'ADMINISTRADOR' | 'VENDEDOR' | 'VISUALIZADOR';
+export type InviteRole = 'ADMIN' | 'SELLER' | 'VIEWER';
 
 export interface Invitation {
   id: string;

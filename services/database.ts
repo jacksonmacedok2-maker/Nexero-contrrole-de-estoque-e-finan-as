@@ -57,9 +57,11 @@ export const db = {
         .select('company_id')
         .eq('user_id', session.user.id)
         .eq('status', 'ACTIVE')
+        .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
 
+      // Prioriza o company_id do membership (UUID real), senão usa o ID do usuário (UUID real)
       if (error || !data) {
         return session.user.id;
       }
@@ -84,37 +86,30 @@ export const db = {
     async generateInvitation(email: string, role: InviteRole): Promise<Invitation> {
       const { data: { session } } = await supabase.auth.getSession();
       const companyId = await this.getActiveCompanyId();
+      
       if (!session?.user || !companyId) throw new Error("Não autorizado ou sessão expirada.");
-
-      // Mapeamento de cargo UI -> DB (Garante compatibilidade com as constraints da tabela)
-      const roleMap: Record<InviteRole, string> = {
-        'ADMINISTRADOR': 'ADMIN',
-        'VENDEDOR': 'SELLER',
-        'VISUALIZADOR': 'VIEWER'
-      };
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
-      // CRITICAL: NÃO enviamos o 'token' aqui. O banco gera gen_random_uuid() no default da coluna.
-      const invite = {
+      // CRITICAL: NÃO enviamos o 'token' ou 'id'. O banco gera via DEFAULT gen_random_uuid().
+      const invitePayload = {
         company_id: companyId,
         invited_email: email.trim().toLowerCase(),
-        role: roleMap[role],
+        role: role, // Agora o tipo InviteRole ('ADMIN' | 'SELLER' | 'VIEWER') já bate com a DB
         status: 'PENDING',
         expires_at: expiresAt.toISOString(),
         created_by: session.user.id
       };
 
-      // Uso correto do supabase-js conforme as diretrizes
       const { data, error } = await supabase
         .from('invitations')
-        .insert(invite)
+        .insert(invitePayload)
         .select()
         .single();
 
       if (error) {
-        console.error('Erro ao inserir convite:', error);
+        console.error('Falha ao inserir convite no Supabase:', error);
         throw new Error(error.message);
       }
       

@@ -5,13 +5,19 @@ import { db } from '../services/database';
 import { Invitation, InviteRole } from '../types';
 import { formatDate } from '../utils/helpers';
 
+const ROLE_LABELS: Record<InviteRole, string> = {
+  'ADMIN': 'ADMINISTRADOR',
+  'SELLER': 'VENDEDOR',
+  'VIEWER': 'VISUALIZADOR'
+};
+
 const Team: React.FC = () => {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<InviteRole>('VENDEDOR');
+  const [role, setRole] = useState<InviteRole>('SELLER');
   const [error, setError] = useState('');
   const [generatedLink, setGeneratedLink] = useState('');
   const [copied, setCopied] = useState(false);
@@ -43,10 +49,10 @@ const Team: React.FC = () => {
       const link = `${window.location.origin}/auth/invite?token=${invite.token}`;
       setGeneratedLink(link);
       fetchInvitations();
+      console.log('INVITE CREATED =>', invite);
     } catch (err: any) {
-      // Exibe a mensagem de erro real do banco de dados (ex: UUID inválido, restrição de role, etc)
       console.error('Falha ao gerar convite:', err);
-      setError(err.message || 'Erro inesperado ao gerar convite.');
+      setError(err.message || 'Erro inesperado ao gerar convite. Verifique as configurações de banco.');
     } finally {
       setIsGenerating(false);
     }
@@ -111,7 +117,7 @@ const Team: React.FC = () => {
                         <p className="text-sm font-black text-slate-900 dark:text-white">{invite.invited_email}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[9px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 border border-slate-200 dark:border-slate-700">
-                            {invite.role}
+                            {ROLE_LABELS[invite.role] || invite.role}
                           </span>
                           <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded flex items-center gap-1 ${
                             invite.status === 'ACCEPTED' ? 'text-emerald-500 bg-emerald-50' : 'text-amber-500 bg-amber-50'
@@ -226,7 +232,7 @@ const Team: React.FC = () => {
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cargo / Permissão</label>
                        <div className="grid grid-cols-3 gap-2">
-                          {(['ADMINISTRADOR', 'VENDEDOR', 'VISUALIZADOR'] as InviteRole[]).map(r => (
+                          {(['ADMIN', 'SELLER', 'VIEWER'] as InviteRole[]).map(r => (
                             <button
                               key={r}
                               type="button"
@@ -237,7 +243,7 @@ const Team: React.FC = () => {
                                 : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 text-slate-500'
                               }`}
                             >
-                              {r}
+                              {ROLE_LABELS[r]}
                             </button>
                           ))}
                        </div>
