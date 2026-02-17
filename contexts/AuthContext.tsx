@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata: any) => Promise<boolean>;
+  resendConfirmation: (email: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => void;
   refreshSession: () => Promise<void>;
@@ -21,17 +22,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Verifica se estamos em uma rota de callback para evitar flash de login automático
+    const isCallback = window.location.pathname.startsWith('/auth/');
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+      if (session?.user && !isCallback) {
         updateUserState(session.user);
       }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
+      // Se for um evento de login (SIGNED_IN) mas estivermos no callback, não atualizamos o estado 'user' global
+      // Isso impede que o App.tsx renderize o Dashboard no celular antes do AuthCallback chamar o signOut.
+      if (session?.user && !window.location.pathname.startsWith('/auth/')) {
         updateUserState(session.user);
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
     });
@@ -73,20 +79,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...metadata,
           role: UserRole.ADMIN,
           permissions: ['FINANCE', 'INVENTORY', 'PRODUCTS', 'ORDERS', 'POS', 'SETTINGS', 'REPORTS', 'CLIENTS']
-        }
+        },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       }
     });
 
     if (error) throw error;
     
-    // Sucesso imediato: Se houver sessão, o usuário é logado na hora.
     if (data.session) {
       updateUserState(data.user);
       return false; 
     }
     
-    // Se não houver sessão imediata mas houver usuário, retornamos true indicando sucesso de criação.
     return !!(data.user && !data.session);
+  };
+
+  const resendConfirmation = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      }
+    });
+    if (error) throw error;
   };
 
   const resetPassword = async (email: string) => {
@@ -111,8 +127,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] animate-pulse">Estabelecendo Conexão Segura...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] animate-pulse">Sincronizando Segurança...</p>
         </div>
       </div>
     );
@@ -123,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       login, 
       signUp, 
+      resendConfirmation,
       resetPassword,
       logout, 
       refreshSession,

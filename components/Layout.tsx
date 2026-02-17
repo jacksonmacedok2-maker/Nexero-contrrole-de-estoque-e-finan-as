@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Menu, Bell, User, Cloud, CloudOff, LogOut, ChevronDown, BarChart, Search, Plus } from 'lucide-react';
+import { Menu, Bell, User, Cloud, CloudOff, LogOut, ChevronDown, BarChart, Search } from 'lucide-react';
 import { NAVIGATION_ITEMS } from '../constants';
 import { useAppSettings } from '../contexts/AppSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -43,7 +43,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
               <BarChart size={18} className="text-white" />
             </div>
             {!isCompact && (
-              <span className="text-lg font-bold tracking-tight text-white">Nexero</span>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold tracking-tight text-white leading-tight">Nexero</span>
+                <span className="text-[8px] font-black text-brand-500 uppercase tracking-widest leading-none">Estoque & Vendas</span>
+              </div>
             )}
           </div>
         </div>
@@ -94,7 +97,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
             </button>
             <div className="hidden md:flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 w-64 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
               <Search size={16} className="text-slate-400 mr-2" />
-              <input type="text" placeholder="Buscar..." className="bg-transparent border-none text-xs w-full focus:outline-none" />
+              <input type="text" placeholder="Buscar no sistema..." className="bg-transparent border-none text-xs w-full focus:outline-none" />
             </div>
           </div>
 
