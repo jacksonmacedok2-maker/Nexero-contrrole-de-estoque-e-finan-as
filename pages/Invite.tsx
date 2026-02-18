@@ -6,6 +6,8 @@ import { supabase } from '../services/supabase';
 const Invite: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+
 
   useEffect(() => {
     const validateToken = async () => {
@@ -31,6 +33,17 @@ const Invite: React.FC = () => {
         }
 
         const invite = data[0];
+         // Buscar nome da empresa
+const { data: company } = await supabase
+  .from('companies')
+  .select('name')
+  .eq('id', invite.company_id)
+  .single();
+
+if (company) {
+  setCompanyName(company.name);
+}
+
 
         // Se o token for válido, redirecionamos para a tela de Login/Signup
         // passando os dados via query params para o formulário se auto-preencher
@@ -64,7 +77,11 @@ const Invite: React.FC = () => {
              <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg">
                 <ShieldCheck size={24} />
              </div>
-             <h1 className="text-xl font-black uppercase tracking-tighter italic text-slate-900 dark:text-white">Nexero <span className="text-brand-600">Enterprise</span></h1>
+            <h1 className="text-xl font-black uppercase tracking-tighter italic text-slate-900 dark:text-white">
+  {companyName || 'Nexero'}
+</h1>
+
+ 
            </div>
 
            {loading ? (

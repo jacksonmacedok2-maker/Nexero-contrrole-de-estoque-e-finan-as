@@ -73,7 +73,8 @@ const AppContent: React.FC = () => {
     const queryParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     
-    if (path.includes('/auth/invite')) return <Invite setActiveTab={navigateTo} />;
+    // Fix: Removed setActiveTab prop from Invite component (line 76) because the component in Invite.tsx is defined as not accepting any props.
+    if (path.includes('/auth/invite')) return <Invite />;
     if (queryParams.has('error') || hashParams.has('error')) return <AuthError setActiveTab={() => navigateTo('dashboard')} />;
     if (queryParams.has('code') || hashParams.has('access_token')) return <AuthCallback setActiveTab={() => navigateTo('dashboard')} />;
     if (path.includes('/auth/confirmed')) return <AuthConfirmed setActiveTab={() => navigateTo('dashboard')} />;

@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, User, Building, Search, ArrowLeft, Landmark, Loader2, Zap, Cpu, Shield, Check, KeyRound, ArrowRight, Inbox, RefreshCw, Info } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchCnpjData } from '../utils/helpers';
+import { supabase } from '../services/supabase';
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'WAITING_CONFIRMATION';
 
 const Login: React.FC = () => {
-  const { login, signUp, resendConfirmation, resetPassword, isAuthenticated } = useAuth();
+  const { login, signUp, resendConfirmation, resetPassword, isAuthenticated, refreshMembership } = useAuth();
   
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +38,13 @@ const Login: React.FC = () => {
     const forcedMode = params.get('mode');
     const invitedEmail = params.get('email');
     const invitedName = params.get('name');
+    const token = params.get('token');
     
+    // Armazena o token de convite no localStorage para persistência (caso precise confirmar e-mail)
+    if (token) {
+      localStorage.setItem('nexero_invite_token', token);
+    }
+
     if (forcedMode === 'SIGNUP') {
       setMode('SIGNUP');
       if (invitedEmail) {
@@ -45,12 +52,13 @@ const Login: React.FC = () => {
           ...prev, 
           email: invitedEmail, 
           name: invitedName || '',
-          companyName: 'Equipe Nexero' // Nome temporário para convidados
+          companyName: 'Equipe Nexero'
         }));
       }
     }
 
     if (isAuthenticated) {
+      handlePostAuthInvite();
       setIsRedirecting(true);
       const redirectPath = params.get('redirect');
       if (redirectPath) {
@@ -60,6 +68,27 @@ const Login: React.FC = () => {
       }
     }
   }, [isAuthenticated]);
+
+  const handlePostAuthInvite = async () => {
+    const token = localStorage.getItem('nexero_invite_token');
+    if (!token) return;
+
+    try {
+      console.log('Detectado convite pendente. Processando vinculação...');
+      const { data, error: rpcError } = await supabase.rpc('accept_invitation', { 
+        p_token: token 
+      });
+
+      if (rpcError) throw rpcError;
+      
+      console.log('Convite aceito com sucesso!');
+      localStorage.removeItem('nexero_invite_token');
+      // Atualiza o contexto para carregar os dados da nova empresa vinculada
+      await refreshMembership();
+    } catch (err) {
+      console.error('Erro ao aceitar convite automaticamente:', err);
+    }
+  };
 
   const resetUIStates = () => {
     setIsLoading(false);
@@ -74,6 +103,7 @@ const Login: React.FC = () => {
     
     try {
       await login(email, password);
+      // O useEffect detectará o isAuthenticated e chamará handlePostAuthInvite
     } catch (err: any) {
       setError(err.message || 'Erro ao realizar login. Verifique suas credenciais.');
       setIsLoading(false);
@@ -105,12 +135,12 @@ const Login: React.FC = () => {
 
       const needsConfirmation = await signUp(signupData.email, signupData.password, metadata);
       
-      setIsLoading(false);
-      
       if (needsConfirmation) {
+        setIsLoading(false);
         setMode('WAITING_CONFIRMATION');
       } else {
-        setSuccessMessage('Instância configurada com sucesso! Redirecionando...');
+        // Se logou direto (sem confirmação), o flow segue via useEffect/isAuthenticated
+        setSuccessMessage('Conta configurada com sucesso!');
       }
     } catch (err: any) {
       setError(err.message || 'Erro ao criar conta.');
@@ -184,8 +214,8 @@ const Login: React.FC = () => {
             </div>
           </div>
           <div className="text-center space-y-3">
-            <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Aguarde...</h2>
-            <p className="text-slate-500 dark:text-slate-400 font-bold max-w-xs italic mx-auto">Sincronizando sua infraestrutura Nexero.</p>
+            <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Sincronizando...</h2>
+            <p className="text-slate-500 dark:text-slate-400 font-bold max-w-xs italic mx-auto">Preparando seu ambiente de trabalho.</p>
           </div>
         </div>
       </div>
