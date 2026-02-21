@@ -19,7 +19,10 @@ import {
   Trash2,
   Pencil,
   ReceiptText,
-  Eye
+  Eye,
+  ArrowUpDown,
+  SlidersHorizontal,
+  Check
 } from 'lucide-react';
 import { formatCurrency, fetchCnpjData, isValidCpf } from '../utils/helpers';
 import { Client as ClientType } from '../types';
@@ -39,8 +42,22 @@ type MenuState =
       placement: 'bottom' | 'top';
     };
 
+type SortMode = 'NAME_ASC' | 'NAME_DESC' | 'CREDIT_DESC' | 'CREDIT_ASC';
+
+type Filters = {
+  statuses: Set<string>; // ACTIVE, BLOCKED, ARCHIVED
+  types: Set<string>; // PJ, PF
+  sort: SortMode;
+};
+
 const MENU_WIDTH = 260;
 const MENU_HEIGHT_EST = 260;
+
+const defaultFilters = (): Filters => ({
+  statuses: new Set<string>(),
+  types: new Set<string>(),
+  sort: 'NAME_ASC'
+});
 
 const Clients: React.FC = () => {
   const { companyId } = useAuth();
@@ -60,6 +77,10 @@ const Clients: React.FC = () => {
 
   const [confirmDeleteClient, setConfirmDeleteClient] = useState<ClientRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // ✅ filtros avançados (FUNCIONA)
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<Filters>(defaultFilters());
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -95,7 +116,10 @@ const Clients: React.FC = () => {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenu(null);
+      if (e.key === 'Escape') {
+        setMenu(null);
+        setIsFilterOpen(false);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -103,20 +127,68 @@ const Clients: React.FC = () => {
 
   const safeLower = (v: any) => (v ?? '').toString().toLowerCase();
 
+  const getClientStatus = (c: ClientRow): string => (c.status || 'ACTIVE').toString().toUpperCase();
+  const getClientType = (c: ClientRow): string => (c.type || '').toString().toUpperCase(); // PJ/PF
+  const getClientCredit = (c: ClientRow): number => Number(c.credit_limit || 0);
+
+  // ✅ Search + Filtro + Ordenação (FUNCIONA)
   const filtered = useMemo(() => {
     const q = safeLower(searchTerm).trim();
-    if (!q) return clients;
-    return clients.filter((c) => {
-      return (
+
+    const statusFilterActive = filters.statuses.size > 0;
+    const typeFilterActive = filters.types.size > 0;
+
+    let list = clients.filter((c) => {
+      const matchSearch =
+        !q ||
         safeLower(c.name).includes(q) ||
         safeLower(c.cnpj_cpf).includes(q) ||
         safeLower(c.email).includes(q) ||
-        safeLower(c.phone).includes(q)
-      );
-    });
-  }, [clients, searchTerm]);
+        safeLower(c.phone).includes(q);
 
-  const getClientStatus = (c: ClientRow): string => (c.status || 'ACTIVE').toString().toUpperCase();
+      if (!matchSearch) return false;
+
+      if (statusFilterActive) {
+        const st = getClientStatus(c);
+        if (!filters.statuses.has(st)) return false;
+      }
+
+      if (typeFilterActive) {
+        const tp = getClientType(c);
+        if (!filters.types.has(tp)) return false;
+      }
+
+      return true;
+    });
+
+    list = [...list].sort((a, b) => {
+      const na = (a.name || '').toString().toLowerCase();
+      const nb = (b.name || '').toString().toLowerCase();
+
+      switch (filters.sort) {
+        case 'NAME_ASC':
+          return na.localeCompare(nb);
+        case 'NAME_DESC':
+          return nb.localeCompare(na);
+        case 'CREDIT_DESC':
+          return getClientCredit(b) - getClientCredit(a);
+        case 'CREDIT_ASC':
+          return getClientCredit(a) - getClientCredit(b);
+        default:
+          return na.localeCompare(nb);
+      }
+    });
+
+    return list;
+  }, [clients, searchTerm, filters]);
+
+  const filtersCount = useMemo(() => {
+    let count = 0;
+    if (filters.statuses.size > 0) count++;
+    if (filters.types.size > 0) count++;
+    if (filters.sort !== 'NAME_ASC') count++;
+    return count;
+  }, [filters]);
 
   const runUpdateClient = async (id: string, patch: Record<string, any>) => {
     setGlobalError('');
@@ -228,24 +300,12 @@ const Clients: React.FC = () => {
   const StatusPill = ({ c }: { c: ClientRow }) => {
     const s = getClientStatus(c);
     if (s === 'BLOCKED') {
-      return (
-        <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-rose-600 bg-rose-50 dark:bg-rose-500/10">
-          BLOQUEADO
-        </span>
-      );
+      return <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-rose-600 bg-rose-50 dark:bg-rose-500/10">BLOQUEADO</span>;
     }
     if (s === 'ARCHIVED') {
-      return (
-        <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-100 dark:bg-slate-800">
-          ARQUIVADO
-        </span>
-      );
+      return <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-100 dark:bg-slate-800">ARQUIVADO</span>;
     }
-    return (
-      <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10">
-        ATIVO
-      </span>
-    );
+    return <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10">ATIVO</span>;
   };
 
   const Avatar = ({ name, type }: { name: string; type?: string }) => {
@@ -282,7 +342,149 @@ const Clients: React.FC = () => {
         </div>
       )}
 
-      {/* Backdrop do menu flutuante */}
+      {/* Drawer filtros */}
+      {isFilterOpen && (
+        <FilterDrawer
+          value={filters}
+          onClose={() => setIsFilterOpen(false)}
+          onApply={(next) => {
+            setFilters(next);
+            setIsFilterOpen(false);
+          }}
+          onClear={() => setFilters(defaultFilters())}
+        />
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Gestão de Clientes</h2>
+          <p className="text-slate-500 dark:text-slate-400">Sua base de dados comercial centralizada.</p>
+        </div>
+        <button
+          onClick={() => {
+            setEditingClient(null);
+            setIsModalOpen(true);
+          }}
+          className="bg-brand-600 text-white px-5 py-3 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-brand-700 transition-all shadow-xl shadow-brand-600/20 active:scale-95"
+        >
+          <Plus size={20} /> Novo Cliente
+        </button>
+      </div>
+
+      {globalError && (
+        <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-3 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold">
+          <AlertCircle size={16} /> {globalError}
+        </div>
+      )}
+
+      {/* Search + filter */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b dark:border-slate-800 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+          <div className="relative w-full md:w-96 group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-600 transition-colors" size={18} />
+            <input
+              type="text"
+              placeholder="Nome, CPF/CNPJ ou e-mail..."
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-brand-500/10 text-sm font-semibold transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* ✅ AGORA TEM onClick (é isso que faltava no seu código) */}
+          <button
+            onClick={() => setIsFilterOpen(true)}
+            className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-200 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-colors"
+          >
+            <SlidersHorizontal size={16} />
+            Filtros Avançados
+            {filtersCount > 0 && (
+              <span className="ml-1 px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-200 text-[10px] font-black">
+                {filtersCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Cards */}
+        <div className="p-4">
+          {loading ? (
+            <div className="py-20 text-center">
+              <Loader2 className="animate-spin inline-block text-brand-600 mb-2" size={32} />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sincronizando clientes...</p>
+            </div>
+          ) : (
+            <>
+              {filtered.length === 0 ? (
+                <div className="py-20 text-center">
+                  <UserRound className="inline-block text-slate-200 mb-4" size={48} />
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum cliente encontrado</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {filtered.map((client) => (
+                    <div key={client.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.6rem] shadow-sm hover:shadow-xl transition-all overflow-hidden group">
+                      <div className="p-5 bg-gradient-to-b from-slate-50/70 to-white dark:from-slate-800/30 dark:to-slate-900">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <Avatar name={client.name} type={client.type} />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-black text-slate-900 dark:text-white truncate">{client.name}</p>
+                                <StatusPill c={client} />
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold truncate">{client.cnpj_cpf || 'Sem documento'}</p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={(e) => openFloatingMenu(e, client)}
+                            className="p-2 rounded-xl text-slate-400 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors shrink-0"
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 gap-2">
+                          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                            <Mail size={14} className="text-slate-400 shrink-0" />
+                            <span className="truncate">{client.email || '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                            <Phone size={14} className="text-slate-400 shrink-0" />
+                            <span className="truncate">{client.phone || '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                            <MapPin size={14} className="text-slate-400 shrink-0" />
+                            <span className="truncate">{client.address || 'Endereço não cadastrado'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-end justify-between">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Crédito</p>
+                          <p className="text-lg font-black text-slate-900 dark:text-white">{formatCurrency(client.credit_limit || 0)}</p>
+                        </div>
+
+                        <button
+                          onClick={() => onActionView(client)}
+                          className="px-4 py-3 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95"
+                        >
+                          Ver detalhes
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* menu flutuante */}
       {menu && (
         <div className="fixed inset-0 z-[99990]" onClick={() => setMenu(null)}>
           <div
@@ -327,7 +529,7 @@ const Clients: React.FC = () => {
         </div>
       )}
 
-      {/* Modal confirmar exclusão */}
+      {/* confirmar delete */}
       {confirmDeleteClient && (
         <div className="fixed inset-0 z-[99998] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !isDeleting && setConfirmDeleteClient(null)} />
@@ -352,18 +554,10 @@ const Clients: React.FC = () => {
             </div>
 
             <div className="p-5 border-t dark:border-slate-800 flex gap-3 bg-slate-50/50 dark:bg-slate-800/20">
-              <button
-                onClick={() => setConfirmDeleteClient(null)}
-                disabled={isDeleting}
-                className="flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white disabled:opacity-60"
-              >
+              <button onClick={() => setConfirmDeleteClient(null)} disabled={isDeleting} className="flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white disabled:opacity-60">
                 Cancelar
               </button>
-              <button
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className="flex-[1.3] py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 disabled:opacity-60 flex items-center justify-center gap-2"
-              >
+              <button onClick={confirmDelete} disabled={isDeleting} className="flex-[1.3] py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 disabled:opacity-60 flex items-center justify-center gap-2">
                 {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
                 {isDeleting ? 'Excluindo...' : 'Excluir'}
               </button>
@@ -372,136 +566,7 @@ const Clients: React.FC = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Gestão de Clientes</h2>
-          <p className="text-slate-500 dark:text-slate-400">Sua base de dados comercial centralizada.</p>
-        </div>
-        <button
-          onClick={() => {
-            setEditingClient(null);
-            setIsModalOpen(true);
-          }}
-          className="bg-brand-600 text-white px-5 py-3 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-brand-700 transition-all shadow-xl shadow-brand-600/20 active:scale-95"
-        >
-          <Plus size={20} /> Novo Cliente
-        </button>
-      </div>
-
-      {globalError && (
-        <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-3 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold">
-          <AlertCircle size={16} /> {globalError}
-        </div>
-      )}
-
-      {/* Search + filter */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b dark:border-slate-800 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
-          <div className="relative w-full md:w-96 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-600 transition-colors" size={18} />
-            <input
-              type="text"
-              placeholder="Nome, CPF/CNPJ ou e-mail..."
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-brand-500/10 text-sm font-semibold transition-all"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <button className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-400 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">
-            <Filter size={16} /> Filtros Avançados
-          </button>
-        </div>
-
-        {/* Cards */}
-        <div className="p-4">
-          {loading ? (
-            <div className="py-20 text-center">
-              <Loader2 className="animate-spin inline-block text-brand-600 mb-2" size={32} />
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sincronizando clientes...</p>
-            </div>
-          ) : (
-            <>
-              {filtered.length === 0 ? (
-                <div className="py-20 text-center">
-                  <UserRound className="inline-block text-slate-200 mb-4" size={48} />
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum cliente na base</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {filtered.map((client) => (
-                    <div
-                      key={client.id}
-                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.6rem] shadow-sm hover:shadow-xl transition-all overflow-hidden group"
-                    >
-                      {/* top */}
-                      <div className="p-5 bg-gradient-to-b from-slate-50/70 to-white dark:from-slate-800/30 dark:to-slate-900">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3 min-w-0">
-                            <Avatar name={client.name} type={client.type} />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="text-sm font-black text-slate-900 dark:text-white truncate">
-                                  {client.name}
-                                </p>
-                                <StatusPill c={client} />
-                              </div>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold truncate">
-                                {client.cnpj_cpf || 'Sem documento'}
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={(e) => openFloatingMenu(e, client)}
-                            className="p-2 rounded-xl text-slate-400 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors shrink-0"
-                          >
-                            <MoreHorizontal size={18} />
-                          </button>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-1 gap-2">
-                          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
-                            <Mail size={14} className="text-slate-400 shrink-0" />
-                            <span className="truncate">{client.email || '-'}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
-                            <Phone size={14} className="text-slate-400 shrink-0" />
-                            <span className="truncate">{client.phone || '-'}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
-                            <MapPin size={14} className="text-slate-400 shrink-0" />
-                            <span className="truncate">{client.address || 'Endereço não cadastrado'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* bottom */}
-                      <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-end justify-between">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Crédito</p>
-                          <p className="text-lg font-black text-slate-900 dark:text-white">
-                            {formatCurrency(client.credit_limit || 0)}
-                          </p>
-                        </div>
-
-                        <button
-                          onClick={() => onActionView(client)}
-                          className="px-4 py-3 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95"
-                        >
-                          Ver detalhes
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Modal/drawer originais (mantive) */}
+      {/* Modais existentes */}
       {isModalOpen && companyId && (
         <ClientModal
           companyId={companyId}
@@ -530,27 +595,167 @@ const Clients: React.FC = () => {
 };
 
 const MenuItem: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
-  <button
-    onClick={onClick}
-    className="w-full px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
-  >
+  <button onClick={onClick} className="w-full px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2">
     <span className="text-slate-500">{icon}</span>
     <span className="flex-1 text-left">{label}</span>
   </button>
 );
 
 const MenuItemDanger: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
-  <button
-    onClick={onClick}
-    className="w-full px-3 py-2 rounded-xl text-xs font-black text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2"
-  >
+  <button onClick={onClick} className="w-full px-3 py-2 rounded-xl text-xs font-black text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2">
     <span className="text-rose-500">{icon}</span>
     <span className="flex-1 text-left">{label}</span>
   </button>
 );
 
-// ===== Drawer + Modal (mesmos do seu fluxo) =====
+const PillToggle: React.FC<{ active: boolean; label: string; onClick: () => void }> = ({ active, label, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${
+      active
+        ? 'bg-brand-600 text-white border-brand-600 shadow-lg shadow-brand-600/20'
+        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+    }`}
+    type="button"
+  >
+    {active && <Check size={14} />}
+    {label}
+  </button>
+);
 
+const FilterDrawer: React.FC<{
+  value: Filters;
+  onClose: () => void;
+  onApply: (v: Filters) => void;
+  onClear: () => void;
+}> = ({ value, onClose, onApply, onClear }) => {
+  const [draft, setDraft] = useState<Filters>(() => ({
+    statuses: new Set(value.statuses),
+    types: new Set(value.types),
+    sort: value.sort
+  }));
+
+  const toggleSet = (setKey: 'statuses' | 'types', item: string) => {
+    setDraft((prev) => {
+      const next = { ...prev, statuses: new Set(prev.statuses), types: new Set(prev.types) };
+      const s = next[setKey];
+      if (s.has(item)) s.delete(item);
+      else s.add(item);
+      return next;
+    });
+  };
+
+  const isActive = (setKey: 'statuses' | 'types', item: string) => draft[setKey].has(item);
+
+  const sortLabel = (s: SortMode) => {
+    switch (s) {
+      case 'NAME_ASC':
+        return 'Nome (A–Z)';
+      case 'NAME_DESC':
+        return 'Nome (Z–A)';
+      case 'CREDIT_DESC':
+        return 'Crédito (Maior)';
+      case 'CREDIT_ASC':
+        return 'Crédito (Menor)';
+      default:
+        return 'Nome (A–Z)';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[99997]">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col">
+        <div className="p-6 border-b dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+          <div>
+            <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Filtros</p>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">Filtros avançados</h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-8 overflow-y-auto">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Status</p>
+            <div className="flex flex-wrap gap-2">
+              <PillToggle active={isActive('statuses', 'ACTIVE')} label="Ativo" onClick={() => toggleSet('statuses', 'ACTIVE')} />
+              <PillToggle active={isActive('statuses', 'BLOCKED')} label="Bloqueado" onClick={() => toggleSet('statuses', 'BLOCKED')} />
+              <PillToggle active={isActive('statuses', 'ARCHIVED')} label="Arquivado" onClick={() => toggleSet('statuses', 'ARCHIVED')} />
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+              Se nada estiver selecionado, mostra <b>todos</b>.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Tipo</p>
+            <div className="flex flex-wrap gap-2">
+              <PillToggle active={isActive('types', 'PJ')} label="PJ" onClick={() => toggleSet('types', 'PJ')} />
+              <PillToggle active={isActive('types', 'PF')} label="PF" onClick={() => toggleSet('types', 'PF')} />
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+              Se nada estiver selecionado, mostra <b>todos</b>.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Ordenação</p>
+            <div className="grid grid-cols-1 gap-2">
+              {(['NAME_ASC', 'NAME_DESC', 'CREDIT_DESC', 'CREDIT_ASC'] as SortMode[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setDraft((prev) => ({ ...prev, sort: s }))}
+                  className={`w-full px-4 py-3 rounded-2xl border flex items-center justify-between text-left transition-all ${
+                    draft.sort === s
+                      ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-200 dark:border-brand-500/20'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-200'
+                  }`}
+                  type="button"
+                >
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown size={16} className={draft.sort === s ? 'text-brand-600' : 'text-slate-400'} />
+                    <span className="text-sm font-black">{sortLabel(s)}</span>
+                  </div>
+                  {draft.sort === s && <CheckCircle2 size={18} className="text-brand-600" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex gap-3">
+          <button
+            onClick={() => {
+              onClear();
+              setDraft(defaultFilters());
+            }}
+            className="flex-1 py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800"
+            type="button"
+          >
+            Limpar
+          </button>
+          <button
+            onClick={() =>
+              onApply({
+                statuses: new Set(draft.statuses),
+                types: new Set(draft.types),
+                sort: draft.sort
+              })
+            }
+            className="flex-[1.4] py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 text-white shadow-xl shadow-brand-600/20"
+            type="button"
+          >
+            Aplicar filtros
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==== seus modais (mantidos) ====
 const ClientDetailsDrawer: React.FC<{ client: any; onClose: () => void; onEdit: () => void }> = ({ client, onClose, onEdit }) => {
   return (
     <div className="fixed inset-0 z-[120] flex justify-end">
@@ -595,10 +800,7 @@ const ClientDetailsDrawer: React.FC<{ client: any; onClose: () => void; onEdit: 
             </div>
           )}
 
-          <button
-            onClick={onEdit}
-            className="w-full py-3 bg-brand-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all"
-          >
+          <button onClick={onEdit} className="w-full py-3 bg-brand-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all">
             Editar cliente
           </button>
         </div>
@@ -607,7 +809,12 @@ const ClientDetailsDrawer: React.FC<{ client: any; onClose: () => void; onEdit: 
   );
 };
 
-const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: () => void; editingClient?: any | null }> = ({ companyId, onClose, onRefresh, editingClient }) => {
+const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: () => void; editingClient?: any | null }> = ({
+  companyId,
+  onClose,
+  onRefresh,
+  editingClient
+}) => {
   const [docType, setDocType] = useState<'PF' | 'PJ'>(editingClient?.type === 'PF' ? 'PF' : 'PJ');
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -733,18 +940,10 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           )}
 
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
-            <button
-              onClick={() => setDocType('PJ')}
-              className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`}
-              type="button"
-            >
+            <button onClick={() => setDocType('PJ')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
               Pessoa Jurídica
             </button>
-            <button
-              onClick={() => setDocType('PF')}
-              className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`}
-              type="button"
-            >
+            <button onClick={() => setDocType('PF')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
               Pessoa Física
             </button>
           </div>
@@ -752,23 +951,13 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType === 'PJ' ? 'Razão Social' : 'Nome Completo'}</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType}</label>
               <div className="relative">
-                <input
-                  type="text"
-                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all"
-                  value={formData.cnpj_cpf}
-                  onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })}
-                />
+                <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.cnpj_cpf} onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })} />
                 {docType === 'PJ' && formData.cnpj_cpf.replace(/\D/g, '').length === 14 && (
                   <button onClick={handleLookup} disabled={isSearching} className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold bg-brand-600 text-white px-2 py-1 rounded hover:bg-brand-700" type="button">
                     {isSearching ? '...' : 'BUSCAR'}
@@ -779,42 +968,22 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
+              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
-              <input
-                type="email"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
+              <input type="email" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Endereço Completo</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
+              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Crédito</label>
-              <input
-                type="number"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
-                value={formData.credit_limit}
-                onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
-              />
+              <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.credit_limit} onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })} />
             </div>
           </div>
         </div>
@@ -823,12 +992,7 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           <button onClick={onClose} className="flex-1 py-3 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-widest" type="button">
             Descartar
           </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex-2 w-2/3 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50"
-            type="button"
-          >
+          <button onClick={handleSave} disabled={isSaving} className="flex-2 w-2/3 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50" type="button">
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
             {isSaving ? 'Processando...' : 'Salvar Cliente'}
           </button>
