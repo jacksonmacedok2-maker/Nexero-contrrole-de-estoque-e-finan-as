@@ -144,7 +144,11 @@ export const db = {
         .from('invitations')
         .delete()
         .eq('id', id);
-      if (error) throw error;
+        
+      if (error) {
+        console.error('[DB] Erro ao deletar convite:', error);
+        throw error;
+      }
     }
   },
 
@@ -330,7 +334,7 @@ export const db = {
       if (!session?.user) throw new Error("Não autenticado");
       if (!settings.company_id) throw new Error("ID da empresa ausente.");
 
-      const { data, error } = await supabase
+      const { data, error = null } = await supabase
         .from('commercial_settings')
         .upsert({ ...settings, user_id: session.user.id }, { onConflict: 'company_id' })
         .select()
@@ -357,7 +361,7 @@ export const db = {
       if (!session?.user) throw new Error("Não autenticado");
       if (!settings.company_id) throw new Error("ID da empresa ausente.");
 
-      const { data, error } = await supabase
+      const { data, error = null } = await supabase
         .from('company_settings')
         .upsert({ ...settings, user_id: session.user.id }, { onConflict: 'company_id' })
         .select()

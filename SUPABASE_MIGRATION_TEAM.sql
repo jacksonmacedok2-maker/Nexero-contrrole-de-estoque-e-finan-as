@@ -1,6 +1,6 @@
 
 -- ======================================================
--- GESTÃO DE EQUIPE E MULTI-TENANCY - NEXERO (POLICIES FIXED)
+-- GESTÃO DE EQUIPE E MULTI-TENANCY - NEXERO (FIXED POLICIES)
 -- ======================================================
 
 -- 1. Tabela de Empresas
@@ -24,11 +24,11 @@ CREATE TABLE IF NOT EXISTS public.memberships (
     UNIQUE(user_id, company_id)
 );
 
--- 3. Tabela de Convites (Aprimorada)
+-- 3. Tabela de Convites
 CREATE TABLE IF NOT EXISTS public.invitations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id uuid REFERENCES public.companies(id) ON DELETE CASCADE NOT NULL,
-    invited_name text NOT NULL,
+    invited_name text,
     invited_email text NOT NULL,
     role text NOT NULL CHECK (role IN ('ADMIN', 'SELLER', 'VIEWER')),
     token text DEFAULT encode(gen_random_bytes(32), 'hex') UNIQUE,
@@ -38,43 +38,42 @@ CREATE TABLE IF NOT EXISTS public.invitations (
     created_by uuid REFERENCES auth.users(id)
 );
 
--- Garantir coluna de nome caso a tabela já exista
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'invitations' AND COLUMN_NAME = 'invited_name') THEN
-        ALTER TABLE public.invitations ADD COLUMN invited_name text NOT NULL DEFAULT 'Convidado';
-    END IF;
-END $$;
-
 -- 4. Habilitar RLS
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 
--- 5. Políticas de Acesso
+-- 5. POLÍTICAS DE ACESSO (CORRIGIDAS PARA EVITAR RECURSÃO)
+
+-- Empresas: Dono tem acesso total
 DROP POLICY IF EXISTS "companies_owner_access" ON public.companies;
 CREATE POLICY "companies_owner_access" ON public.companies FOR ALL TO authenticated 
 USING (owner_user_id = auth.uid());
 
-DROP POLICY IF EXISTS "memberships_manage" ON memberships;
-CREATE POLICY "memberships_manage" ON memberships FOR ALL TO authenticated 
+-- Membros: Permitir que membros vejam seus próprios registros
+DROP POLICY IF EXISTS "memberships_view_own" ON memberships;
+CREATE POLICY "memberships_view_own" ON memberships FOR SELECT TO authenticated 
+USING (user_id = auth.uid());
+
+-- Membros: Permitir que Donos da empresa gerenciem membros (via tabela de empresas para evitar recursão)
+DROP POLICY IF EXISTS "memberships_owner_manage" ON memberships;
+CREATE POLICY "memberships_owner_manage" ON memberships FOR ALL TO authenticated 
 USING (
     EXISTS (
-        SELECT 1 FROM memberships m 
-        WHERE m.company_id = memberships.company_id 
-        AND m.user_id = auth.uid() 
-        AND m.role IN ('OWNER', 'ADMIN')
+        SELECT 1 FROM public.companies c 
+        WHERE c.id = memberships.company_id 
+        AND c.owner_user_id = auth.uid()
     )
 );
 
-DROP POLICY IF EXISTS "invitations_manage" ON invitations;
-CREATE POLICY "invitations_manage" ON invitations FOR ALL TO authenticated 
+-- Convites: Permitir que Donos gerenciem convites
+DROP POLICY IF EXISTS "invitations_owner_manage" ON invitations;
+CREATE POLICY "invitations_owner_manage" ON invitations FOR ALL TO authenticated 
 USING (
     EXISTS (
-        SELECT 1 FROM memberships m 
-        WHERE m.company_id = invitations.company_id 
-        AND m.user_id = auth.uid() 
-        AND m.role IN ('OWNER', 'ADMIN')
+        SELECT 1 FROM public.companies c 
+        WHERE c.id = invitations.company_id 
+        AND c.owner_user_id = auth.uid()
     )
 );
 

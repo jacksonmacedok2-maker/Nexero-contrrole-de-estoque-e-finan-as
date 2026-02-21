@@ -99,15 +99,23 @@ const Team: React.FC = () => {
   const handleDeleteInvite = async (id: string) => {
     if (deletingId) return;
     if (confirm('Deseja cancelar este convite? O link de acesso será invalidado imediatamente.')) {
+      // Atualização Otimista: Remove da lista local antes da confirmação do servidor
+      const previousInvites = [...invitations];
+      setInvitations(prev => prev.filter(i => i.id !== id));
       setDeletingId(id);
-      console.log(`Iniciando exclusão do convite ID: ${id}`);
+      
+      console.log(`[Team] Iniciando exclusão do convite ID: ${id}`);
+      
       try {
         await db.team.deleteInvitation(id);
-        console.log('Convite excluído com sucesso.');
-        fetchData();
+        console.log('[Team] Convite excluído com sucesso no servidor.');
+        // Opcional: recarregar dados para garantir sincronia absoluta
+        // fetchData(); 
       } catch (err: any) {
-        console.error('Erro ao excluir convite:', err);
-        alert(`Falha ao excluir convite: ${err.message || 'Erro desconhecido'}`);
+        console.error('[Team] Erro ao excluir convite:', err);
+        // Reverte a atualização otimista em caso de erro
+        setInvitations(previousInvites);
+        alert(`Falha ao excluir convite: ${err.message || 'Erro desconhecido. Verifique suas permissões.'}`);
       } finally {
         setDeletingId(null);
       }
