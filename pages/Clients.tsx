@@ -21,7 +21,8 @@ import {
   Eye,
   ArrowUpDown,
   SlidersHorizontal,
-  Check
+  Check,
+  Tag
 } from 'lucide-react';
 import { formatCurrency, fetchCnpjData, isValidCpf } from '../utils/helpers';
 import { Client as ClientType } from '../types';
@@ -46,7 +47,7 @@ type SortMode = 'NAME_ASC' | 'NAME_DESC' | 'CREDIT_DESC' | 'CREDIT_ASC';
 type Filters = {
   statuses: Set<string>; // ACTIVE, BLOCKED, ARCHIVED
   types: Set<string>; // PJ, PF
-  categories: Set<string>; // VIP, ATACADO, VAREJO (ou outras)
+  categories: Set<string>; // VIP, ATACADO, VAREJO
   sort: SortMode;
 };
 
@@ -58,6 +59,12 @@ const CATEGORY_OPTIONS = [
   { value: 'ATACADO', label: 'Atacado' },
   { value: 'VAREJO', label: 'Varejo' }
 ] as const;
+
+const categoryLabel = (v?: string) => {
+  const up = (v || '').toString().toUpperCase().trim();
+  const found = CATEGORY_OPTIONS.find((c) => c.value === up);
+  return found ? found.label : up || '';
+};
 
 const defaultFilters = (): Filters => ({
   statuses: new Set<string>(),
@@ -85,9 +92,14 @@ const Clients: React.FC = () => {
   const [confirmDeleteClient, setConfirmDeleteClient] = useState<ClientRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ✅ filtros avançados (FUNCIONA)
+  // ✅ filtros avançados
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>(defaultFilters());
+
+  // ✅ modal motivo do bloqueio
+  const [blockReasonClient, setBlockReasonClient] = useState<ClientRow | null>(null);
+  const [blockReasonText, setBlockReasonText] = useState('');
+  const [isBlocking, setIsBlocking] = useState(false);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -96,11 +108,20 @@ const Clients: React.FC = () => {
 
   const friendlyError = (msg: string) => {
     const m = (msg || '').toLowerCase();
-    if (m.includes('row-level security') || m.includes('rls')) return 'Sem permissão para concluir essa ação (RLS).';
+
+    if (m.includes('jwt') || m.includes('token') || m.includes('not authenticated') || m.includes('auth')) {
+      return 'Sua sessão expirou. Faça login novamente.';
+    }
+
+    if (m.includes('row-level security') || m.includes('rls') || m.includes('permission denied') || m.includes('insufficient privilege')) {
+      return 'Sem permissão para concluir essa ação (RLS/permissão).';
+    }
+
     if (m.includes('duplicate key') || m.includes('already exists')) return 'Já existe um registro com esse identificador.';
     if (m.includes('violates foreign key') || m.includes('foreign key')) return 'Não dá para excluir: existe vínculo com pedidos/vendas.';
     if (m.includes('column') && m.includes('does not exist')) return 'Falta uma coluna no Supabase (ajuste a tabela e tente novamente).';
-    return 'Ocorreu um erro. Tente novamente.';
+
+    return msg ? `Erro: ${msg}` : 'Ocorreu um erro. Tente novamente.';
   };
 
   const fetchClients = async () => {
@@ -126,11 +147,16 @@ const Clients: React.FC = () => {
       if (e.key === 'Escape') {
         setMenu(null);
         setIsFilterOpen(false);
+
+        if (!isBlocking) {
+          setBlockReasonClient(null);
+          setBlockReasonText('');
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [isBlocking]);
 
   const safeLower = (v: any) => (v ?? '').toString().toLowerCase();
   const safeUpper = (v: any) => (v ?? '').toString().toUpperCase();
@@ -139,24 +165,10 @@ const Clients: React.FC = () => {
   const getClientType = (c: ClientRow): string => (c.type || '').toString().toUpperCase(); // PJ/PF
   const getClientCredit = (c: ClientRow): number => Number(c.credit_limit || 0);
 
-  // 🔎 Categoria: tenta achar em campos comuns sem quebrar nada.
-  // Se o seu campo for um nome específico, me diga e eu deixo direto nele.
-  const getClientCategory = (c: ClientRow): string => {
-    const raw =
-      c.category ??
-      c.category_name ??
-      c.segment ??
-      c.customer_category ??
-      c.client_category ??
-      c.tag ??
-      c.tags ??
-      '';
-    // se vier array, junta
-    if (Array.isArray(raw)) return safeUpper(raw.join(' ')).trim();
-    return safeUpper(raw).trim();
-  };
+  // ✅ agora é direto no campo `category`
+  const getClientCategory = (c: ClientRow): string => safeUpper(c.category || '').trim();
 
-  // ✅ Search + Filtro + Ordenação (FUNCIONA)
+  // ✅ Search + Filtro + Ordenação
   const filtered = useMemo(() => {
     const q = safeLower(searchTerm).trim();
 
@@ -186,12 +198,8 @@ const Clients: React.FC = () => {
 
       if (categoryFilterActive) {
         const cat = getClientCategory(c);
-        // regra: se o campo vier vazio, não passa quando houver filtro ativo
         if (!cat) return false;
-
-        // tenta match simples por conter (bom pra casos tipo "VIP;VAREJO")
-        const hasAny = Array.from(filters.categories).some((wanted) => cat.includes(wanted));
-        if (!hasAny) return false;
+        if (!filters.categories.has(cat)) return false;
       }
 
       return true;
@@ -230,14 +238,14 @@ const Clients: React.FC = () => {
   const runUpdateClient = async (id: string, patch: Record<string, any>) => {
     setGlobalError('');
     const { error } = await supabase.from('clients').update(patch).eq('id', id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(error.message || error.details || 'Falha ao atualizar cliente.');
     await fetchClients();
   };
 
   const runDeleteClient = async (id: string) => {
     setGlobalError('');
     const { error } = await supabase.from('clients').delete().eq('id', id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(error.message || error.details || 'Falha ao excluir cliente.');
     await fetchClients();
   };
 
@@ -260,19 +268,45 @@ const Clients: React.FC = () => {
   const onActionBlockToggle = async (c: ClientRow) => {
     try {
       const status = getClientStatus(c);
+
       if (status === 'BLOCKED') {
         await runUpdateClient(c.id, { status: 'ACTIVE', blocked_reason: null });
         showToast('success', 'Cliente desbloqueado.');
-      } else {
-        const reason = prompt('Motivo do bloqueio (opcional):', '') || null;
-        await runUpdateClient(c.id, { status: 'BLOCKED', blocked_reason: reason });
-        showToast('success', 'Cliente bloqueado.');
+        setMenu(null);
+        return;
       }
+
       setMenu(null);
+      setBlockReasonClient(c);
+      setBlockReasonText('');
     } catch (e: any) {
       const msg = friendlyError(e?.message || '');
       setGlobalError(msg);
       showToast('error', msg);
+    }
+  };
+
+  const confirmBlockWithReason = async () => {
+    if (!blockReasonClient) return;
+
+    setIsBlocking(true);
+    setGlobalError('');
+
+    try {
+      const reason = blockReasonText.trim();
+      await runUpdateClient(blockReasonClient.id, {
+        status: 'BLOCKED',
+        blocked_reason: reason.length > 0 ? reason : null
+      });
+      showToast('success', 'Cliente bloqueado.');
+      setBlockReasonClient(null);
+      setBlockReasonText('');
+    } catch (e: any) {
+      const msg = friendlyError(e?.message || '');
+      setGlobalError(msg);
+      showToast('error', msg);
+    } finally {
+      setIsBlocking(false);
     }
   };
 
@@ -345,6 +379,16 @@ const Clients: React.FC = () => {
     return <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10">ATIVO</span>;
   };
 
+  const CategoryBadge = ({ c }: { c: ClientRow }) => {
+    const cat = getClientCategory(c);
+    if (!cat) return null;
+    return (
+      <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-brand-700 bg-brand-50 dark:bg-brand-500/10 dark:text-brand-200">
+        {categoryLabel(cat)}
+      </span>
+    );
+  };
+
   const Avatar = ({ name, type }: { name: string; type?: string }) => {
     const letter = (name || '?').charAt(0).toUpperCase();
     const isPJ = (type || '').toUpperCase() === 'PJ';
@@ -375,6 +419,79 @@ const Clients: React.FC = () => {
           >
             {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
             {toast.message}
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Motivo do bloqueio */}
+      {blockReasonClient && (
+        <div className="fixed inset-0 z-[99998] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => {
+              if (isBlocking) return;
+              setBlockReasonClient(null);
+              setBlockReasonText('');
+            }}
+          />
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div className="p-5 border-b dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+              <div>
+                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Bloquear cliente</p>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Motivo do bloqueio</h3>
+              </div>
+              <button
+                onClick={() => {
+                  if (isBlocking) return;
+                  setBlockReasonClient(null);
+                  setBlockReasonText('');
+                }}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                Cliente: <span className="font-black">{blockReasonClient.name}</span>
+              </p>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo (opcional)</label>
+                <textarea
+                  className="w-full min-h-[110px] px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-4 focus:ring-brand-500/10 text-sm font-medium transition-all resize-none"
+                  placeholder="Ex.: inadimplência, dados inconsistentes, pedido recusado..."
+                  value={blockReasonText}
+                  onChange={(e) => setBlockReasonText(e.target.value)}
+                  disabled={isBlocking}
+                />
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Se você não preencher, o cliente será bloqueado mesmo assim.</p>
+              </div>
+            </div>
+
+            <div className="p-5 border-t dark:border-slate-800 flex gap-3 bg-slate-50/50 dark:bg-slate-800/20">
+              <button
+                onClick={() => {
+                  if (isBlocking) return;
+                  setBlockReasonClient(null);
+                  setBlockReasonText('');
+                }}
+                disabled={isBlocking}
+                className="flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={confirmBlockWithReason}
+                disabled={isBlocking}
+                className="flex-[1.2] py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {isBlocking ? <Loader2 className="animate-spin" size={16} /> : <Shield size={16} />}
+                {isBlocking ? 'Bloqueando...' : 'Bloquear'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -470,6 +587,7 @@ const Clients: React.FC = () => {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="text-sm font-black text-slate-900 dark:text-white truncate">{client.name}</p>
                                 <StatusPill c={client} />
+                                <CategoryBadge c={client} />
                               </div>
                               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold truncate">{client.cnpj_cpf || 'Sem documento'}</p>
                             </div>
@@ -722,11 +840,8 @@ const FilterDrawer: React.FC<{
           </button>
         </div>
 
-        {/* Conteúdo rolável */}
         <div className="p-6 space-y-8 overflow-y-auto">
-          <div className="text-[11px] text-slate-500 dark:text-slate-400">
-            Dica: se você não selecionar nada em um grupo, ele não filtra esse campo.
-          </div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400">Dica: se você não selecionar nada em um grupo, ele não filtra esse campo.</div>
 
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Status</p>
@@ -745,7 +860,6 @@ const FilterDrawer: React.FC<{
             </div>
           </div>
 
-          {/* ✅ NOVO: Categorias */}
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Categorias</p>
             <div className="flex flex-wrap gap-2">
@@ -780,7 +894,6 @@ const FilterDrawer: React.FC<{
           </div>
         </div>
 
-        {/* ✅ Rodapé sticky (sempre visível) */}
         <div className="sticky bottom-0 p-6 border-t dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/30 backdrop-blur flex gap-3">
           <button
             onClick={() => {
@@ -817,7 +930,7 @@ const FilterDrawer: React.FC<{
   );
 };
 
-// ==== seus modais (mantidos) ====
+// ==== seus modais ====
 const ClientDetailsDrawer: React.FC<{ client: any; onClose: () => void; onEdit: () => void }> = ({ client, onClose, onEdit }) => {
   return (
     <div className="fixed inset-0 z-[120] flex justify-end">
@@ -834,6 +947,11 @@ const ClientDetailsDrawer: React.FC<{ client: any; onClose: () => void; onEdit: 
         </div>
 
         <div className="space-y-4 text-sm">
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Categoria</p>
+            <p className="font-bold text-slate-800 dark:text-slate-200">{client.category ? categoryLabel(client.category) : '-'}</p>
+          </div>
+
           <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Documento</p>
             <p className="font-bold text-slate-800 dark:text-slate-200">{client.cnpj_cpf || '-'}</p>
@@ -888,7 +1006,8 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
     email: editingClient?.email || '',
     phone: editingClient?.phone || '',
     address: editingClient?.address || '',
-    credit_limit: (editingClient?.credit_limit ?? 0).toString()
+    credit_limit: (editingClient?.credit_limit ?? 0).toString(),
+    category: (editingClient?.category || '').toString().toUpperCase()
   });
 
   useEffect(() => {
@@ -900,7 +1019,8 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
         email: editingClient?.email || '',
         phone: editingClient?.phone || '',
         address: editingClient?.address || '',
-        credit_limit: (editingClient?.credit_limit ?? 0).toString()
+        credit_limit: (editingClient?.credit_limit ?? 0).toString(),
+        category: (editingClient?.category || '').toString().toUpperCase()
       });
     }
   }, [editingClient]);
@@ -945,6 +1065,8 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
     setError('');
 
     try {
+      const category = formData.category ? formData.category.toUpperCase() : null;
+
       if (editingClient?.id) {
         const { error: upErr } = await supabase
           .from('clients')
@@ -955,7 +1077,8 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
             phone: formData.phone,
             address: formData.address,
             type: docType,
-            credit_limit: parseFloat(formData.credit_limit) || 0
+            credit_limit: parseFloat(formData.credit_limit) || 0,
+            category
           })
           .eq('id', editingClient.id);
         if (upErr) throw new Error(upErr.message);
@@ -968,7 +1091,8 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
             phone: formData.phone,
             address: formData.address,
             type: docType,
-            credit_limit: parseFloat(formData.credit_limit) || 0
+            credit_limit: parseFloat(formData.credit_limit) || 0,
+            category
           } as Partial<ClientType>,
           companyId
         );
@@ -1002,55 +1126,54 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           )}
 
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
-            <button
-              onClick={() => setDocType('PJ')}
-              className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${
-                docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'
-              }`}
-              type="button"
-            >
+            <button onClick={() => setDocType('PJ')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
               Pessoa Jurídica
             </button>
-            <button
-              onClick={() => setDocType('PF')}
-              className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${
-                docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'
-              }`}
-              type="button"
-            >
+            <button onClick={() => setDocType('PF')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
               Pessoa Física
             </button>
           </div>
 
+          {/* ✅ Categoria */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+              <Tag size={14} /> Categoria
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORY_OPTIONS.map((c) => {
+                const active = formData.category === c.value;
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setFormData((p) => ({ ...p, category: active ? '' : c.value }))}
+                    className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${
+                      active
+                        ? 'bg-brand-600 text-white border-brand-600 shadow-lg shadow-brand-600/20'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                    }`}
+                  >
+                    {active && <Check size={14} />}
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Clique de novo para remover.</p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
-                {docType === 'PJ' ? 'Razão Social' : 'Nome Completo'}
-              </label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType === 'PJ' ? 'Razão Social' : 'Nome Completo'}</label>
+              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType}</label>
               <div className="relative">
-                <input
-                  type="text"
-                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all"
-                  value={formData.cnpj_cpf}
-                  onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })}
-                />
+                <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.cnpj_cpf} onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })} />
                 {docType === 'PJ' && formData.cnpj_cpf.replace(/\D/g, '').length === 14 && (
-                  <button
-                    onClick={handleLookup}
-                    disabled={isSearching}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold bg-brand-600 text-white px-2 py-1 rounded hover:bg-brand-700"
-                    type="button"
-                  >
+                  <button onClick={handleLookup} disabled={isSearching} className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold bg-brand-600 text-white px-2 py-1 rounded hover:bg-brand-700" type="button">
                     {isSearching ? '...' : 'BUSCAR'}
                   </button>
                 )}
@@ -1059,42 +1182,22 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
+              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
-              <input
-                type="email"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
+              <input type="email" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Endereço Completo</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
+              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Crédito</label>
-              <input
-                type="number"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
-                value={formData.credit_limit}
-                onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
-              />
+              <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.credit_limit} onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })} />
             </div>
           </div>
         </div>
@@ -1103,12 +1206,7 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           <button onClick={onClose} className="flex-1 py-3 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-widest" type="button">
             Descartar
           </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex-2 w-2/3 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50"
-            type="button"
-          >
+          <button onClick={handleSave} disabled={isSaving} className="flex-2 w-2/3 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50" type="button">
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
             {isSaving ? 'Processando...' : 'Salvar Cliente'}
           </button>
