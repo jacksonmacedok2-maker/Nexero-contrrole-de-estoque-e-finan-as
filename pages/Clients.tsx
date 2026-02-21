@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Plus,
   Search,
@@ -28,9 +28,23 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 
 type ClientRow = any;
+type ToastState = { type: 'success' | 'error'; message: string } | null;
+
+type MenuState =
+  | null
+  | {
+      client: ClientRow;
+      x: number;
+      y: number;
+      placement: 'bottom' | 'top';
+    };
+
+const MENU_WIDTH = 260;
+const MENU_HEIGHT_EST = 260;
 
 const Clients: React.FC = () => {
   const { companyId } = useAuth();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientRow | null>(null);
   const [detailsClient, setDetailsClient] = useState<ClientRow | null>(null);
@@ -39,8 +53,27 @@ const Clients: React.FC = () => {
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [openMenuForId, setOpenMenuForId] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
   const [globalError, setGlobalError] = useState<string>('');
+
+  const [menu, setMenu] = useState<MenuState>(null);
+
+  const [confirmDeleteClient, setConfirmDeleteClient] = useState<ClientRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    window.setTimeout(() => setToast(null), 2600);
+  };
+
+  const friendlyError = (msg: string) => {
+    const m = (msg || '').toLowerCase();
+    if (m.includes('row-level security') || m.includes('rls')) return 'Sem permissão para concluir essa ação (RLS).';
+    if (m.includes('duplicate key') || m.includes('already exists')) return 'Já existe um registro com esse identificador.';
+    if (m.includes('violates foreign key') || m.includes('foreign key')) return 'Não dá para excluir: existe vínculo com pedidos/vendas.';
+    if (m.includes('column') && m.includes('does not exist')) return 'Falta uma coluna no Supabase (ajuste a tabela e tente novamente).';
+    return 'Ocorreu um erro. Tente novamente.';
+  };
 
   const fetchClients = async () => {
     if (!companyId) return;
@@ -50,7 +83,7 @@ const Clients: React.FC = () => {
       setClients(data as any[]);
     } catch (err: any) {
       console.error('Erro ao carregar clientes:', err);
-      setGlobalError(err?.message || 'Erro ao carregar clientes.');
+      setGlobalError(friendlyError(err?.message || ''));
     } finally {
       setLoading(false);
     }
@@ -60,30 +93,35 @@ const Clients: React.FC = () => {
     fetchClients();
   }, [companyId]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenu(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const safeLower = (v: any) => (v ?? '').toString().toLowerCase();
 
-  const filtered = clients.filter((c) => {
+  const filtered = useMemo(() => {
     const q = safeLower(searchTerm).trim();
-    if (!q) return true;
-    return (
-      safeLower(c.name).includes(q) ||
-      safeLower(c.cnpj_cpf).includes(q) ||
-      safeLower(c.email).includes(q) ||
-      safeLower(c.phone).includes(q)
-    );
-  });
+    if (!q) return clients;
+    return clients.filter((c) => {
+      return (
+        safeLower(c.name).includes(q) ||
+        safeLower(c.cnpj_cpf).includes(q) ||
+        safeLower(c.email).includes(q) ||
+        safeLower(c.phone).includes(q)
+      );
+    });
+  }, [clients, searchTerm]);
 
   const getClientStatus = (c: ClientRow): string => (c.status || 'ACTIVE').toString().toUpperCase();
 
   const runUpdateClient = async (id: string, patch: Record<string, any>) => {
     setGlobalError('');
     const { error } = await supabase.from('clients').update(patch).eq('id', id);
-    if (error) {
-      if ((error.message || '').toLowerCase().includes('column') && (error.message || '').toLowerCase().includes('does not exist')) {
-        throw new Error('Falta coluna na tabela clients. Crie as colunas (ex: status e blocked_reason) no Supabase e tente de novo.');
-      }
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
     await fetchClients();
   };
 
@@ -96,18 +134,18 @@ const Clients: React.FC = () => {
 
   const onActionView = (c: ClientRow) => {
     setDetailsClient(c);
-    setOpenMenuForId(null);
+    setMenu(null);
   };
 
   const onActionEdit = (c: ClientRow) => {
     setEditingClient(c);
     setIsModalOpen(true);
-    setOpenMenuForId(null);
+    setMenu(null);
   };
 
   const onActionNewOrder = (c: ClientRow) => {
-    alert(`TODO: abrir "Novo Pedido" já selecionando o cliente: ${c.name}`);
-    setOpenMenuForId(null);
+    showToast('error', 'Em breve: abrir novo pedido já com cliente selecionado.');
+    setMenu(null);
   };
 
   const onActionBlockToggle = async (c: ClientRow) => {
@@ -115,13 +153,17 @@ const Clients: React.FC = () => {
       const status = getClientStatus(c);
       if (status === 'BLOCKED') {
         await runUpdateClient(c.id, { status: 'ACTIVE', blocked_reason: null });
+        showToast('success', 'Cliente desbloqueado.');
       } else {
         const reason = prompt('Motivo do bloqueio (opcional):', '') || null;
         await runUpdateClient(c.id, { status: 'BLOCKED', blocked_reason: reason });
+        showToast('success', 'Cliente bloqueado.');
       }
-      setOpenMenuForId(null);
+      setMenu(null);
     } catch (e: any) {
-      setGlobalError(e?.message || 'Erro ao bloquear/desbloquear.');
+      const msg = friendlyError(e?.message || '');
+      setGlobalError(msg);
+      showToast('error', msg);
     }
   };
 
@@ -130,192 +172,336 @@ const Clients: React.FC = () => {
       const status = getClientStatus(c);
       if (status === 'ARCHIVED') {
         await runUpdateClient(c.id, { status: 'ACTIVE' });
+        showToast('success', 'Cliente reativado.');
       } else {
         await runUpdateClient(c.id, { status: 'ARCHIVED' });
+        showToast('success', 'Cliente arquivado.');
       }
-      setOpenMenuForId(null);
+      setMenu(null);
     } catch (e: any) {
-      setGlobalError(e?.message || 'Erro ao arquivar/reativar.');
+      const msg = friendlyError(e?.message || '');
+      setGlobalError(msg);
+      showToast('error', msg);
     }
   };
 
-  const onActionDelete = async (c: ClientRow) => {
+  const onActionDelete = (c: ClientRow) => {
+    setMenu(null);
+    setConfirmDeleteClient(c);
+  };
+
+  const confirmDelete = async () => {
+    if (!confirmDeleteClient) return;
+    setIsDeleting(true);
+    setGlobalError('');
     try {
-      const ok = confirm(`Excluir PERMANENTEMENTE o cliente "${c.name}"?\n\nRecomendado: use "Arquivar" em vez de excluir, pra não perder histórico.`);
-      if (!ok) return;
-      await runDeleteClient(c.id);
-      setOpenMenuForId(null);
+      await runDeleteClient(confirmDeleteClient.id);
+      showToast('success', 'Cliente excluído com sucesso.');
+      setConfirmDeleteClient(null);
     } catch (e: any) {
-      setGlobalError(e?.message || 'Erro ao excluir cliente.');
+      const msg = friendlyError(e?.message || '');
+      setGlobalError(msg);
+      showToast('error', msg);
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const openFloatingMenu = (e: React.MouseEvent, client: ClientRow) => {
+    e.stopPropagation();
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const preferX = rect.right - MENU_WIDTH;
+    const x = Math.max(12, Math.min(preferX, window.innerWidth - MENU_WIDTH - 12));
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placement: 'bottom' | 'top' = spaceBelow > MENU_HEIGHT_EST ? 'bottom' : 'top';
+
+    const y =
+      placement === 'bottom'
+        ? Math.min(rect.bottom + 8, window.innerHeight - 12)
+        : Math.max(12, rect.top - 8);
+
+    setMenu({ client, x, y, placement });
   };
 
   const StatusPill = ({ c }: { c: ClientRow }) => {
     const s = getClientStatus(c);
     if (s === 'BLOCKED') {
-      return <span className="ml-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest text-rose-600 bg-rose-50 dark:bg-rose-500/10">BLOQUEADO</span>;
+      return (
+        <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-rose-600 bg-rose-50 dark:bg-rose-500/10">
+          BLOQUEADO
+        </span>
+      );
     }
     if (s === 'ARCHIVED') {
-      return <span className="ml-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-100 dark:bg-slate-800">ARQUIVADO</span>;
+      return (
+        <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-100 dark:bg-slate-800">
+          ARQUIVADO
+        </span>
+      );
     }
-    return null;
+    return (
+      <span className="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10">
+        ATIVO
+      </span>
+    );
+  };
+
+  const Avatar = ({ name, type }: { name: string; type?: string }) => {
+    const letter = (name || '?').charAt(0).toUpperCase();
+    const isPJ = (type || '').toUpperCase() === 'PJ';
+    return (
+      <div
+        className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm border shadow-sm ${
+          isPJ
+            ? 'bg-brand-50 text-brand-700 border-brand-100 dark:bg-brand-500/10 dark:text-brand-200 dark:border-brand-500/20'
+            : 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-500/10 dark:text-amber-200 dark:border-amber-500/20'
+        }`}
+      >
+        {letter}
+      </div>
+    );
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500" onClick={() => setOpenMenuForId(null)}>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-5 right-5 z-[99999]">
+          <div
+            className={`px-4 py-3 rounded-2xl shadow-2xl border text-xs font-black uppercase tracking-widest flex items-center gap-2 ${
+              toast.type === 'success'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-500/20'
+                : 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-500/20'
+            }`}
+          >
+            {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            {toast.message}
+          </div>
+        </div>
+      )}
+
+      {/* Backdrop do menu flutuante */}
+      {menu && (
+        <div className="fixed inset-0 z-[99990]" onClick={() => setMenu(null)}>
+          <div
+            className="fixed"
+            style={{
+              left: menu.x,
+              top: menu.placement === 'bottom' ? menu.y : undefined,
+              bottom: menu.placement === 'top' ? window.innerHeight - menu.y : undefined,
+              width: MENU_WIDTH
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{menu.client.name}</p>
+              </div>
+
+              <div className="p-2">
+                <MenuItem icon={<Eye size={16} />} label="Ver detalhes" onClick={() => onActionView(menu.client)} />
+                <MenuItem icon={<Pencil size={16} />} label="Editar" onClick={() => onActionEdit(menu.client)} />
+                <MenuItem icon={<ReceiptText size={16} />} label="Novo pedido" onClick={() => onActionNewOrder(menu.client)} />
+
+                <div className="my-2 h-px bg-slate-100 dark:bg-slate-800" />
+
+                <MenuItem
+                  icon={getClientStatus(menu.client) === 'BLOCKED' ? <ShieldOff size={16} /> : <Shield size={16} />}
+                  label={getClientStatus(menu.client) === 'BLOCKED' ? 'Desbloquear' : 'Bloquear'}
+                  onClick={() => onActionBlockToggle(menu.client)}
+                />
+                <MenuItem
+                  icon={getClientStatus(menu.client) === 'ARCHIVED' ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                  label={getClientStatus(menu.client) === 'ARCHIVED' ? 'Reativar' : 'Arquivar'}
+                  onClick={() => onActionArchiveToggle(menu.client)}
+                />
+
+                <div className="my-2 h-px bg-slate-100 dark:bg-slate-800" />
+
+                <MenuItemDanger icon={<Trash2 size={16} />} label="Excluir (permanente)" onClick={() => onActionDelete(menu.client)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar exclusão */}
+      {confirmDeleteClient && (
+        <div className="fixed inset-0 z-[99998] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !isDeleting && setConfirmDeleteClient(null)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div className="p-5 border-b dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+              <div>
+                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Ação perigosa</p>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Excluir cliente</h3>
+              </div>
+              <button onClick={() => !isDeleting && setConfirmDeleteClient(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                Você tem certeza que quer excluir <span className="font-black">{confirmDeleteClient.name}</span>?
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Recomendado: use <b>Arquivar</b> em vez de excluir, para manter histórico.
+              </p>
+            </div>
+
+            <div className="p-5 border-t dark:border-slate-800 flex gap-3 bg-slate-50/50 dark:bg-slate-800/20">
+              <button
+                onClick={() => setConfirmDeleteClient(null)}
+                disabled={isDeleting}
+                className="flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex-[1.3] py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                {isDeleting ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Gestão de Clientes</h2>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Gestão de Clientes</h2>
           <p className="text-slate-500 dark:text-slate-400">Sua base de dados comercial centralizada.</p>
         </div>
         <button
-          onClick={(e) => { e.stopPropagation(); setEditingClient(null); setIsModalOpen(true); }}
-          className="bg-brand-600 text-white px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20"
+          onClick={() => {
+            setEditingClient(null);
+            setIsModalOpen(true);
+          }}
+          className="bg-brand-600 text-white px-5 py-3 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-brand-700 transition-all shadow-xl shadow-brand-600/20 active:scale-95"
         >
           <Plus size={20} /> Novo Cliente
         </button>
       </div>
 
       {globalError && (
-        <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-3 rounded-lg flex items-center gap-3 text-rose-600 text-xs font-bold">
+        <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-3 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold">
           <AlertCircle size={16} /> {globalError}
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+      {/* Search + filter */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="p-4 border-b dark:border-slate-800 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
           <div className="relative w-full md:w-96 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-600 transition-colors" size={18} />
             <input
               type="text"
               placeholder="Nome, CPF/CNPJ ou e-mail..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-sm font-medium transition-all"
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-brand-500/10 text-sm font-semibold transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 text-xs font-bold hover:bg-slate-50 transition-colors">
+          <button className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-400 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">
             <Filter size={16} /> Filtros Avançados
           </button>
         </div>
 
-        {/* ✅ AQUI ESTÁ A CORREÇÃO: overflow-y-visible */}
-        <div className="overflow-x-auto overflow-y-visible">
+        {/* Cards */}
+        <div className="p-4">
           {loading ? (
-            <div className="p-20 text-center">
+            <div className="py-20 text-center">
               <Loader2 className="animate-spin inline-block text-brand-600 mb-2" size={32} />
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sincronizando clientes...</p>
             </div>
           ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-slate-500 text-[10px] font-bold uppercase tracking-widest border-b dark:border-slate-800">
-                  <th className="px-6 py-4">Nome / Documento</th>
-                  <th className="px-6 py-4">Contato</th>
-                  <th className="px-6 py-4">Endereço</th>
-                  <th className="px-6 py-4 text-right">Crédito</th>
-                  <th className="px-6 py-4 text-center">Ações</th>
-                </tr>
-              </thead>
+            <>
+              {filtered.length === 0 ? (
+                <div className="py-20 text-center">
+                  <UserRound className="inline-block text-slate-200 mb-4" size={48} />
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum cliente na base</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {filtered.map((client) => (
+                    <div
+                      key={client.id}
+                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.6rem] shadow-sm hover:shadow-xl transition-all overflow-hidden group"
+                    >
+                      {/* top */}
+                      <div className="p-5 bg-gradient-to-b from-slate-50/70 to-white dark:from-slate-800/30 dark:to-slate-900">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <Avatar name={client.name} type={client.type} />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-black text-slate-900 dark:text-white truncate">
+                                  {client.name}
+                                </p>
+                                <StatusPill c={client} />
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold truncate">
+                                {client.cnpj_cpf || 'Sem documento'}
+                              </p>
+                            </div>
+                          </div>
 
-              <tbody className="divide-y dark:divide-slate-800">
-                {filtered.map((client) => (
-                  <tr key={client.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs ${client.type === 'PJ' ? 'bg-brand-50 text-brand-600' : 'bg-amber-50 text-amber-600'}`}>
-                          {(client.name || '?').charAt(0)}
+                          <button
+                            onClick={(e) => openFloatingMenu(e, client)}
+                            className="p-2 rounded-xl text-slate-400 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors shrink-0"
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
                         </div>
+
+                        <div className="mt-4 grid grid-cols-1 gap-2">
+                          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                            <Mail size={14} className="text-slate-400 shrink-0" />
+                            <span className="truncate">{client.email || '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                            <Phone size={14} className="text-slate-400 shrink-0" />
+                            <span className="truncate">{client.phone || '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                            <MapPin size={14} className="text-slate-400 shrink-0" />
+                            <span className="truncate">{client.address || 'Endereço não cadastrado'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* bottom */}
+                      <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-end justify-between">
                         <div>
-                          <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center">
-                            {client.name}
-                            <StatusPill c={client} />
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Crédito</p>
+                          <p className="text-lg font-black text-slate-900 dark:text-white">
+                            {formatCurrency(client.credit_limit || 0)}
                           </p>
-                          <p className="text-[10px] text-slate-500 font-medium">{client.cnpj_cpf || 'S/ Doc'}</p>
                         </div>
-                      </div>
-                    </td>
 
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-600 dark:text-slate-400"><Mail size={12} /> {client.email || '-'}</div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-600 dark:text-slate-400"><Phone size={12} /> {client.phone || '-'}</div>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 max-w-[220px] truncate">
-                        <MapPin size={12} className="shrink-0 text-slate-400" /> {client.address || 'Não cadastrado'}
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4 text-right">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white">{formatCurrency(client.credit_limit || 0)}</p>
-                    </td>
-
-                    <td className="px-6 py-4 text-center relative">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuForId(openMenuForId === client.id ? null : client.id);
-                        }}
-                        className="p-2 text-slate-400 hover:text-brand-600 transition-colors"
-                      >
-                        <MoreHorizontal size={18} />
-                      </button>
-
-                      {openMenuForId === client.id && (
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          className="absolute right-6 top-14 z-[9999] w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl overflow-hidden text-left"
+                        <button
+                          onClick={() => onActionView(client)}
+                          className="px-4 py-3 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95"
                         >
-                          <button className="w-full px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2" onClick={() => onActionView(client)}>
-                            <Eye size={16} /> Ver detalhes
-                          </button>
-
-                          <button className="w-full px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2" onClick={() => onActionEdit(client)}>
-                            <Pencil size={16} /> Editar
-                          </button>
-
-                          <button className="w-full px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2" onClick={() => onActionNewOrder(client)}>
-                            <ReceiptText size={16} /> Novo pedido
-                          </button>
-
-                          <div className="h-px bg-slate-100 dark:bg-slate-800" />
-
-                          <button className="w-full px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2" onClick={() => onActionBlockToggle(client)}>
-                            {getClientStatus(client) === 'BLOCKED' ? <ShieldOff size={16} /> : <Shield size={16} />}
-                            {getClientStatus(client) === 'BLOCKED' ? 'Desbloquear' : 'Bloquear'}
-                          </button>
-
-                          <button className="w-full px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2" onClick={() => onActionArchiveToggle(client)}>
-                            {getClientStatus(client) === 'ARCHIVED' ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-                            {getClientStatus(client) === 'ARCHIVED' ? 'Reativar' : 'Arquivar'}
-                          </button>
-
-                          <div className="h-px bg-slate-100 dark:bg-slate-800" />
-
-                          <button className="w-full px-4 py-3 text-xs font-black text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2" onClick={() => onActionDelete(client)}>
-                            <Trash2 size={16} /> Excluir (permanente)
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {!loading && clients.length === 0 && (
-            <div className="p-20 text-center">
-              <UserRound className="inline-block text-slate-200 mb-4" size={48} />
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum cliente na base</p>
-            </div>
+                          Ver detalhes
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
+      {/* Modal/drawer originais (mantive) */}
       {isModalOpen && companyId && (
         <ClientModal
           companyId={companyId}
@@ -342,6 +528,28 @@ const Clients: React.FC = () => {
     </div>
   );
 };
+
+const MenuItem: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
+  <button
+    onClick={onClick}
+    className="w-full px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+  >
+    <span className="text-slate-500">{icon}</span>
+    <span className="flex-1 text-left">{label}</span>
+  </button>
+);
+
+const MenuItemDanger: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
+  <button
+    onClick={onClick}
+    className="w-full px-3 py-2 rounded-xl text-xs font-black text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2"
+  >
+    <span className="text-rose-500">{icon}</span>
+    <span className="flex-1 text-left">{label}</span>
+  </button>
+);
+
+// ===== Drawer + Modal (mesmos do seu fluxo) =====
 
 const ClientDetailsDrawer: React.FC<{ client: any; onClose: () => void; onEdit: () => void }> = ({ client, onClose, onEdit }) => {
   return (
@@ -387,7 +595,10 @@ const ClientDetailsDrawer: React.FC<{ client: any; onClose: () => void; onEdit: 
             </div>
           )}
 
-          <button onClick={onEdit} className="w-full py-3 bg-brand-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all">
+          <button
+            onClick={onEdit}
+            className="w-full py-3 bg-brand-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all"
+          >
             Editar cliente
           </button>
         </div>
@@ -522,10 +733,18 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           )}
 
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
-            <button onClick={() => setDocType('PJ')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
+            <button
+              onClick={() => setDocType('PJ')}
+              className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`}
+              type="button"
+            >
               Pessoa Jurídica
             </button>
-            <button onClick={() => setDocType('PF')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
+            <button
+              onClick={() => setDocType('PF')}
+              className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`}
+              type="button"
+            >
               Pessoa Física
             </button>
           </div>
@@ -533,13 +752,23 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType === 'PJ' ? 'Razão Social' : 'Nome Completo'}</label>
-              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType}</label>
               <div className="relative">
-                <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.cnpj_cpf} onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })} />
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all"
+                  value={formData.cnpj_cpf}
+                  onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })}
+                />
                 {docType === 'PJ' && formData.cnpj_cpf.replace(/\D/g, '').length === 14 && (
                   <button onClick={handleLookup} disabled={isSearching} className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold bg-brand-600 text-white px-2 py-1 rounded hover:bg-brand-700" type="button">
                     {isSearching ? '...' : 'BUSCAR'}
@@ -550,22 +779,42 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
-              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
-              <input type="email" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+              <input
+                type="email"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Endereço Completo</label>
-              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Crédito</label>
-              <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.credit_limit} onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })} />
+              <input
+                type="number"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
+                value={formData.credit_limit}
+                onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
+              />
             </div>
           </div>
         </div>
@@ -574,7 +823,12 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           <button onClick={onClose} className="flex-1 py-3 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-widest" type="button">
             Descartar
           </button>
-          <button onClick={handleSave} disabled={isSaving} className="flex-2 w-2/3 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50" type="button">
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex-2 w-2/3 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50"
+            type="button"
+          >
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
             {isSaving ? 'Processando...' : 'Salvar Cliente'}
           </button>
