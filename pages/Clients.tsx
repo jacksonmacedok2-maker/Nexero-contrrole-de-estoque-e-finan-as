@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Plus,
   Search,
-  Filter,
   MoreHorizontal,
   UserRound,
   Mail,
@@ -47,15 +46,23 @@ type SortMode = 'NAME_ASC' | 'NAME_DESC' | 'CREDIT_DESC' | 'CREDIT_ASC';
 type Filters = {
   statuses: Set<string>; // ACTIVE, BLOCKED, ARCHIVED
   types: Set<string>; // PJ, PF
+  categories: Set<string>; // VIP, ATACADO, VAREJO (ou outras)
   sort: SortMode;
 };
 
 const MENU_WIDTH = 260;
 const MENU_HEIGHT_EST = 260;
 
+const CATEGORY_OPTIONS = [
+  { value: 'VIP', label: 'VIP' },
+  { value: 'ATACADO', label: 'Atacado' },
+  { value: 'VAREJO', label: 'Varejo' }
+] as const;
+
 const defaultFilters = (): Filters => ({
   statuses: new Set<string>(),
   types: new Set<string>(),
+  categories: new Set<string>(),
   sort: 'NAME_ASC'
 });
 
@@ -126,10 +133,28 @@ const Clients: React.FC = () => {
   }, []);
 
   const safeLower = (v: any) => (v ?? '').toString().toLowerCase();
+  const safeUpper = (v: any) => (v ?? '').toString().toUpperCase();
 
   const getClientStatus = (c: ClientRow): string => (c.status || 'ACTIVE').toString().toUpperCase();
   const getClientType = (c: ClientRow): string => (c.type || '').toString().toUpperCase(); // PJ/PF
   const getClientCredit = (c: ClientRow): number => Number(c.credit_limit || 0);
+
+  // 🔎 Categoria: tenta achar em campos comuns sem quebrar nada.
+  // Se o seu campo for um nome específico, me diga e eu deixo direto nele.
+  const getClientCategory = (c: ClientRow): string => {
+    const raw =
+      c.category ??
+      c.category_name ??
+      c.segment ??
+      c.customer_category ??
+      c.client_category ??
+      c.tag ??
+      c.tags ??
+      '';
+    // se vier array, junta
+    if (Array.isArray(raw)) return safeUpper(raw.join(' ')).trim();
+    return safeUpper(raw).trim();
+  };
 
   // ✅ Search + Filtro + Ordenação (FUNCIONA)
   const filtered = useMemo(() => {
@@ -137,6 +162,7 @@ const Clients: React.FC = () => {
 
     const statusFilterActive = filters.statuses.size > 0;
     const typeFilterActive = filters.types.size > 0;
+    const categoryFilterActive = filters.categories.size > 0;
 
     let list = clients.filter((c) => {
       const matchSearch =
@@ -156,6 +182,16 @@ const Clients: React.FC = () => {
       if (typeFilterActive) {
         const tp = getClientType(c);
         if (!filters.types.has(tp)) return false;
+      }
+
+      if (categoryFilterActive) {
+        const cat = getClientCategory(c);
+        // regra: se o campo vier vazio, não passa quando houver filtro ativo
+        if (!cat) return false;
+
+        // tenta match simples por conter (bom pra casos tipo "VIP;VAREJO")
+        const hasAny = Array.from(filters.categories).some((wanted) => cat.includes(wanted));
+        if (!hasAny) return false;
       }
 
       return true;
@@ -186,6 +222,7 @@ const Clients: React.FC = () => {
     let count = 0;
     if (filters.statuses.size > 0) count++;
     if (filters.types.size > 0) count++;
+    if (filters.categories.size > 0) count++;
     if (filters.sort !== 'NAME_ASC') count++;
     return count;
   }, [filters]);
@@ -346,6 +383,7 @@ const Clients: React.FC = () => {
       {isFilterOpen && (
         <FilterDrawer
           value={filters}
+          activeCount={filtersCount}
           onClose={() => setIsFilterOpen(false)}
           onApply={(next) => {
             setFilters(next);
@@ -392,7 +430,6 @@ const Clients: React.FC = () => {
             />
           </div>
 
-          {/* ✅ AGORA TEM onClick (é isso que faltava no seu código) */}
           <button
             onClick={() => setIsFilterOpen(true)}
             className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-200 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-colors"
@@ -625,19 +662,26 @@ const PillToggle: React.FC<{ active: boolean; label: string; onClick: () => void
 
 const FilterDrawer: React.FC<{
   value: Filters;
+  activeCount: number;
   onClose: () => void;
   onApply: (v: Filters) => void;
   onClear: () => void;
-}> = ({ value, onClose, onApply, onClear }) => {
+}> = ({ value, activeCount, onClose, onApply, onClear }) => {
   const [draft, setDraft] = useState<Filters>(() => ({
     statuses: new Set(value.statuses),
     types: new Set(value.types),
+    categories: new Set(value.categories),
     sort: value.sort
   }));
 
-  const toggleSet = (setKey: 'statuses' | 'types', item: string) => {
+  const toggleSet = (setKey: 'statuses' | 'types' | 'categories', item: string) => {
     setDraft((prev) => {
-      const next = { ...prev, statuses: new Set(prev.statuses), types: new Set(prev.types) };
+      const next = {
+        ...prev,
+        statuses: new Set(prev.statuses),
+        types: new Set(prev.types),
+        categories: new Set(prev.categories)
+      };
       const s = next[setKey];
       if (s.has(item)) s.delete(item);
       else s.add(item);
@@ -645,7 +689,7 @@ const FilterDrawer: React.FC<{
     });
   };
 
-  const isActive = (setKey: 'statuses' | 'types', item: string) => draft[setKey].has(item);
+  const isActive = (setKey: 'statuses' | 'types' | 'categories', item: string) => draft[setKey].has(item);
 
   const sortLabel = (s: SortMode) => {
     switch (s) {
@@ -662,6 +706,8 @@ const FilterDrawer: React.FC<{
     }
   };
 
+  const title = activeCount > 0 ? `Filtros avançados (${activeCount})` : 'Filtros avançados';
+
   return (
     <div className="fixed inset-0 z-[99997]">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
@@ -669,14 +715,19 @@ const FilterDrawer: React.FC<{
         <div className="p-6 border-b dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
           <div>
             <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Filtros</p>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white">Filtros avançados</h3>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">{title}</h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
             <X size={18} />
           </button>
         </div>
 
+        {/* Conteúdo rolável */}
         <div className="p-6 space-y-8 overflow-y-auto">
+          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+            Dica: se você não selecionar nada em um grupo, ele não filtra esse campo.
+          </div>
+
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Status</p>
             <div className="flex flex-wrap gap-2">
@@ -684,9 +735,6 @@ const FilterDrawer: React.FC<{
               <PillToggle active={isActive('statuses', 'BLOCKED')} label="Bloqueado" onClick={() => toggleSet('statuses', 'BLOCKED')} />
               <PillToggle active={isActive('statuses', 'ARCHIVED')} label="Arquivado" onClick={() => toggleSet('statuses', 'ARCHIVED')} />
             </div>
-            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-              Se nada estiver selecionado, mostra <b>todos</b>.
-            </p>
           </div>
 
           <div>
@@ -695,9 +743,16 @@ const FilterDrawer: React.FC<{
               <PillToggle active={isActive('types', 'PJ')} label="PJ" onClick={() => toggleSet('types', 'PJ')} />
               <PillToggle active={isActive('types', 'PF')} label="PF" onClick={() => toggleSet('types', 'PF')} />
             </div>
-            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-              Se nada estiver selecionado, mostra <b>todos</b>.
-            </p>
+          </div>
+
+          {/* ✅ NOVO: Categorias */}
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Categorias</p>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORY_OPTIONS.map((c) => (
+                <PillToggle key={c.value} active={isActive('categories', c.value)} label={c.label} onClick={() => toggleSet('categories', c.value)} />
+              ))}
+            </div>
           </div>
 
           <div>
@@ -725,22 +780,29 @@ const FilterDrawer: React.FC<{
           </div>
         </div>
 
-        <div className="p-6 border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex gap-3">
+        {/* ✅ Rodapé sticky (sempre visível) */}
+        <div className="sticky bottom-0 p-6 border-t dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/30 backdrop-blur flex gap-3">
           <button
             onClick={() => {
+              if (activeCount === 0) {
+                onClose();
+                return;
+              }
               onClear();
               setDraft(defaultFilters());
             }}
             className="flex-1 py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800"
             type="button"
           >
-            Limpar
+            {activeCount === 0 ? 'Fechar' : 'Limpar'}
           </button>
+
           <button
             onClick={() =>
               onApply({
                 statuses: new Set(draft.statuses),
                 types: new Set(draft.types),
+                categories: new Set(draft.categories),
                 sort: draft.sort
               })
             }
@@ -940,26 +1002,55 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           )}
 
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
-            <button onClick={() => setDocType('PJ')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
+            <button
+              onClick={() => setDocType('PJ')}
+              className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${
+                docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'
+              }`}
+              type="button"
+            >
               Pessoa Jurídica
             </button>
-            <button onClick={() => setDocType('PF')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
+            <button
+              onClick={() => setDocType('PF')}
+              className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${
+                docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'
+              }`}
+              type="button"
+            >
               Pessoa Física
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType === 'PJ' ? 'Razão Social' : 'Nome Completo'}</label>
-              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                {docType === 'PJ' ? 'Razão Social' : 'Nome Completo'}
+              </label>
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType}</label>
               <div className="relative">
-                <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.cnpj_cpf} onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })} />
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all"
+                  value={formData.cnpj_cpf}
+                  onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })}
+                />
                 {docType === 'PJ' && formData.cnpj_cpf.replace(/\D/g, '').length === 14 && (
-                  <button onClick={handleLookup} disabled={isSearching} className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold bg-brand-600 text-white px-2 py-1 rounded hover:bg-brand-700" type="button">
+                  <button
+                    onClick={handleLookup}
+                    disabled={isSearching}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold bg-brand-600 text-white px-2 py-1 rounded hover:bg-brand-700"
+                    type="button"
+                  >
                     {isSearching ? '...' : 'BUSCAR'}
                   </button>
                 )}
@@ -968,22 +1059,42 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
-              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
-              <input type="email" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+              <input
+                type="email"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Endereço Completo</label>
-              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              />
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Crédito</label>
-              <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.credit_limit} onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })} />
+              <input
+                type="number"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10"
+                value={formData.credit_limit}
+                onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
+              />
             </div>
           </div>
         </div>
@@ -992,7 +1103,12 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
           <button onClick={onClose} className="flex-1 py-3 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-widest" type="button">
             Descartar
           </button>
-          <button onClick={handleSave} disabled={isSaving} className="flex-2 w-2/3 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50" type="button">
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex-2 w-2/3 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50"
+            type="button"
+          >
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
             {isSaving ? 'Processando...' : 'Salvar Cliente'}
           </button>
