@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { Client, Order, Transaction, Product, OrderItem, CommercialSettings, CompanySettings, Invitation, InviteRole, OrderStatus, Membership } from '../types';
 
@@ -169,21 +168,32 @@ export const db = {
       } catch (e) {}
       return (localStore.get(STORAGE_KEYS.CLIENTS) || []).filter((c: any) => c.company_id === companyId);
     },
+
     async create(client: Partial<Client>, companyId: string, isSyncing = false) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error("Usuário não autenticado");
 
+      // ✅ CORREÇÃO MÍNIMA: nunca deixar passar id/PK (evita clients_pkey duplicado)
+      const safeClient: any = { ...(client as any) };
+      delete safeClient.id;
+      delete safeClient.created_at;
+      delete safeClient.updated_at;
+      delete safeClient.user_id;
+      delete safeClient.company_id;
+
       const insertData = {
-        name: client.name,
-        cnpj_cpf: client.cnpj_cpf,
-        email: client.email,
-        phone: client.phone,
-        address: client.address,
-        credit_limit: client.credit_limit || 0,
-        type: client.type,
+        name: (safeClient.name || '').trim(),
+        cnpj_cpf: safeClient.cnpj_cpf,
+        email: safeClient.email,
+        phone: safeClient.phone,
+        address: safeClient.address,
+        credit_limit: safeClient.credit_limit || 0,
+        type: safeClient.type,
         user_id: session.user.id,
         company_id: companyId
       };
+
+      if (!insertData.name) throw new Error("Nome do cliente é obrigatório.");
 
       if (navigator.onLine) {
         const { data, error } = await supabase.from('clients').insert([insertData]).select();
@@ -212,6 +222,7 @@ export const db = {
       } catch (e) {}
       return (localStore.get(STORAGE_KEYS.PRODUCTS) || []).filter((p: any) => p.company_id === companyId);
     },
+
     async create(product: Partial<Product>, companyId: string, isSyncing = false) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error("Usuário não autenticado");
@@ -401,7 +412,7 @@ export const db = {
           
         return {
           dailySales: ordersToday?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0,
-          monthlyRevenue: 0, // Pode ser calculado similarmente
+          monthlyRevenue: 0,
           outOfStockItems: productsStock?.filter(p => p.stock <= 0).length || 0,
           pendingOrders: 0
         };
