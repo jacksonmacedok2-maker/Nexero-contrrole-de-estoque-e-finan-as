@@ -1,5 +1,17 @@
 import { supabase } from './supabase';
-import { Client, Order, Transaction, Product, OrderItem, CommercialSettings, CompanySettings, Invitation, InviteRole, OrderStatus, Membership } from '../types';
+import {
+  Client,
+  Order,
+  Transaction,
+  Product,
+  OrderItem,
+  CommercialSettings,
+  CompanySettings,
+  Invitation,
+  InviteRole,
+  OrderStatus,
+  Membership
+} from '../types';
 
 const STORAGE_KEYS = {
   CLIENTS: 'nexero_cache_clients',
@@ -70,26 +82,19 @@ export const db = {
     },
 
     async getMembers(companyId: string): Promise<Membership[]> {
-       const { data, error } = await supabase
-         .from('memberships')
-         .select('*')
-         .eq('company_id', companyId);
-       
-       if (error) throw error;
-       return data;
+      const { data, error } = await supabase.from('memberships').select('*').eq('company_id', companyId);
+      if (error) throw error;
+      return data;
     },
 
     async removeMember(membershipId: string): Promise<void> {
-      const { error } = await supabase
-        .from('memberships')
-        .delete()
-        .eq('id', membershipId);
+      const { error } = await supabase.from('memberships').delete().eq('id', membershipId);
       if (error) throw error;
     },
 
     async createCompany(name: string): Promise<string> {
-      const { data, error } = await supabase.rpc('create_company_for_owner', { 
-        p_company_name: name 
+      const { data, error } = await supabase.rpc('create_company_for_owner', {
+        p_company_name: name
       });
       if (error) throw new Error(error.message);
       return data;
@@ -107,7 +112,7 @@ export const db = {
 
     async generateInvitation(companyId: string, email: string, name: string | null, role: string): Promise<Invitation> {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Não autorizado");
+      if (!session?.user) throw new Error('Não autorizado');
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
@@ -131,19 +136,13 @@ export const db = {
     },
 
     async updateInvitationName(id: string, name: string): Promise<void> {
-      const { error } = await supabase
-        .from('invitations')
-        .update({ invited_name: name.trim() || null })
-        .eq('id', id);
+      const { error } = await supabase.from('invitations').update({ invited_name: name.trim() || null }).eq('id', id);
       if (error) throw error;
     },
 
     async deleteInvitation(id: string): Promise<void> {
-      const { error } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', id);
-        
+      const { error } = await supabase.from('invitations').delete().eq('id', id);
+
       if (error) {
         console.error('[DB] Erro ao deletar convite:', error);
         throw error;
@@ -171,9 +170,9 @@ export const db = {
 
     async create(client: Partial<Client>, companyId: string, isSyncing = false) {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Usuário não autenticado");
+      if (!session?.user) throw new Error('Usuário não autenticado');
 
-      // ✅ CORREÇÃO MÍNIMA: nunca deixar passar id/PK (evita clients_pkey duplicado)
+      // nunca deixar passar id/PK
       const safeClient: any = { ...(client as any) };
       delete safeClient.id;
       delete safeClient.created_at;
@@ -193,7 +192,7 @@ export const db = {
         company_id: companyId
       };
 
-      if (!insertData.name) throw new Error("Nome do cliente é obrigatório.");
+      if (!insertData.name) throw new Error('Nome do cliente é obrigatório.');
 
       if (navigator.onLine) {
         const { data, error } = await supabase.from('clients').insert([insertData]).select();
@@ -225,7 +224,7 @@ export const db = {
 
     async create(product: Partial<Product>, companyId: string, isSyncing = false) {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Usuário não autenticado");
+      if (!session?.user) throw new Error('Usuário não autenticado');
 
       const insertData = {
         name: product.name,
@@ -268,7 +267,7 @@ export const db = {
     },
 
     async getNextCode(companyId: string): Promise<string> {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('order_sequences')
         .select('current_value')
         .eq('company_id', companyId)
@@ -284,31 +283,43 @@ export const db = {
       return `PED-${nextVal.toString().padStart(6, '0')}`;
     },
 
+    // ✅ ALTERAÇÃO MÍNIMA: rollback se falhar ao inserir itens
     async create(order: Partial<Order>, items: OrderItem[], companyId: string) {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Não autenticado");
+      if (!session?.user) throw new Error('Não autenticado');
 
-      if (navigator.onLine) {
-        const code = await this.getNextCode(companyId);
-        const { data: orderData, error: orderError } = await supabase
-          .from('orders')
-          .insert([{ 
-            ...order,
-            code,
-            user_id: session.user.id,
-            company_id: companyId
-          }])
-          .select()
-          .single();
+      if (!navigator.onLine) return;
 
-        if (orderError) throw orderError;
+      const code = await this.getNextCode(companyId);
 
-        const itemsToInsert = items.map(item => ({ ...item, order_id: orderData.id }));
-        const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
-        if (itemsError) throw itemsError;
+      // 1) cria o pedido
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          ...order,
+          code,
+          user_id: session.user.id,
+          company_id: companyId
+        }])
+        .select()
+        .single();
 
-        return orderData;
+      if (orderError) throw orderError;
+
+      // 2) tenta criar itens
+      const itemsToInsert = items.map((item) => ({ ...item, order_id: orderData.id }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(itemsToInsert);
+
+      // 3) se falhar, apaga o pedido (rollback)
+      if (itemsError) {
+        await supabase.from('orders').delete().eq('id', orderData.id);
+        throw itemsError;
       }
+
+      return orderData;
     }
   },
 
@@ -316,13 +327,13 @@ export const db = {
     async getTransactions(): Promise<Transaction[]> {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return [];
-      
+
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
         .eq('user_id', session.user.id)
         .order('date', { ascending: false });
-        
+
       if (error) throw error;
       return data || [];
     }
@@ -342,8 +353,8 @@ export const db = {
     },
     async updateSettings(settings: Partial<CommercialSettings>) {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Não autenticado");
-      if (!settings.company_id) throw new Error("ID da empresa ausente.");
+      if (!session?.user) throw new Error('Não autenticado');
+      if (!settings.company_id) throw new Error('ID da empresa ausente.');
 
       const { data, error = null } = await supabase
         .from('commercial_settings')
@@ -369,8 +380,8 @@ export const db = {
     },
     async updateSettings(settings: Partial<CompanySettings>) {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Não autenticado");
-      if (!settings.company_id) throw new Error("ID da empresa ausente.");
+      if (!session?.user) throw new Error('Não autenticado');
+      if (!settings.company_id) throw new Error('ID da empresa ausente.');
 
       const { data, error = null } = await supabase
         .from('company_settings')
@@ -382,7 +393,7 @@ export const db = {
     },
     async uploadLogo(file: File) {
       const membership = await db.team.getMembership();
-      if (!membership) throw new Error("No membership found");
+      if (!membership) throw new Error('No membership found');
       const fileExt = file.name.split('.').pop();
       const filePath = `logos/${membership.company_id}/logo-${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage.from('company-assets').upload(filePath, file);
@@ -397,23 +408,20 @@ export const db = {
     try {
       if (navigator.onLine) {
         const today = new Date();
-        today.setHours(0,0,0,0);
+        today.setHours(0, 0, 0, 0);
         const { data: ordersToday } = await supabase
           .from('orders')
           .select('total_amount')
           .eq('company_id', companyId)
           .gte('created_at', today.toISOString())
           .eq('status', OrderStatus.COMPLETED);
-        
-        const { data: productsStock } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('company_id', companyId);
-          
+
+        const { data: productsStock } = await supabase.from('products').select('stock').eq('company_id', companyId);
+
         return {
           dailySales: ordersToday?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0,
           monthlyRevenue: 0,
-          outOfStockItems: productsStock?.filter(p => p.stock <= 0).length || 0,
+          outOfStockItems: productsStock?.filter((p) => p.stock <= 0).length || 0,
           pendingOrders: 0
         };
       }
