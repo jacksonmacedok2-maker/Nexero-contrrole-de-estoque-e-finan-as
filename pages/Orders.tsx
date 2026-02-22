@@ -227,6 +227,23 @@ const getRecommendedPct = (p: any) => {
   return Math.max(0, Math.min(100, v));
 };
 
+const parseMoneyInput = (v: any) => {
+  const s = (v ?? '').toString().trim().replace(',', '.');
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const PAYMENT_OPTIONS = [
+  { value: 'DINHEIRO', label: 'Dinheiro (à vista)' },
+  { value: 'CARTAO', label: 'Cartão' },
+  { value: 'PIX', label: 'Pix' },
+  { value: 'TRANSFERENCIA', label: 'Transferência' },
+  { value: 'BOLETO', label: 'Boleto' },
+  { value: 'FIADO', label: 'Fiado / À prazo' }
+];
+
+const INSTALLMENT_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
 const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: () => void }> = ({
   companyId,
   onClose,
@@ -238,11 +255,16 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
-  // ✅ carrinho com desconto por item
   const [cart, setCart] = useState<CartItem[]>([]);
-
-  // ✅ tabs premium no painel direito
   const [rightTab, setRightTab] = useState<'CART' | 'DISCOUNT'>('CART');
+
+  const [paymentMethod, setPaymentMethod] = useState<string>('DINHEIRO');
+
+  const [cardType, setCardType] = useState<'CREDITO' | 'DEBITO'>('DEBITO');
+  const [installments, setInstallments] = useState<number>(1);
+
+  // ✅ NOVO: dinheiro (valor recebido / troco)
+  const [cashReceived, setCashReceived] = useState<string>('');
 
   // ✅ novo cliente
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
@@ -264,6 +286,18 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
     loadData();
   }, [companyId]);
 
+  useEffect(() => {
+    if (paymentMethod === 'CARTAO' && cardType === 'DEBITO') {
+      setInstallments(1);
+    }
+  }, [paymentMethod, cardType]);
+
+  // ✅ se mudar forma de pagamento, limpa erros e, se não for dinheiro, limpa cashReceived
+  useEffect(() => {
+    setError('');
+    if (paymentMethod !== 'DINHEIRO') setCashReceived('');
+  }, [paymentMethod]);
+
   const getProductStock = (productId: string) => {
     const p = products.find((x) => x.id === productId);
     return typeof (p as any)?.stock === 'number' ? (p as any).stock : 0;
@@ -276,6 +310,10 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
   const subtotal = cart.reduce((sum, item) => sum + getLineSubtotal(item), 0);
   const totalDiscount = cart.reduce((sum, item) => sum + getLineDiscountValue(item), 0);
   const total = cart.reduce((sum, item) => sum + getLineTotal(item), 0);
+
+  const cashReceivedNum = parseMoneyInput(cashReceived);
+  const change = Math.max(0, cashReceivedNum - total);
+  const missing = Math.max(0, total - cashReceivedNum);
 
   const addToCart = (p: Product) => {
     setError('');
@@ -331,9 +369,7 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
   };
 
   const setDiscountPct = (productId: string, pct: any) => {
-    setCart((prev) =>
-      prev.map((c) => (c.product.id === productId ? { ...c, discountPct: clampPct(pct) } : c))
-    );
+    setCart((prev) => prev.map((c) => (c.product.id === productId ? { ...c, discountPct: clampPct(pct) } : c)));
   };
 
   const applyRecommended = (productId: string) => {
@@ -388,20 +424,53 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
     }
   };
 
+  const getFinalPaymentMethod = () => {
+    if (paymentMethod !== 'CARTAO') return paymentMethod;
+
+    if (cardType === 'DEBITO') return 'CARTAO_DEBITO';
+
+    const p = Math.max(1, Math.min(12, Number(installments || 1)));
+    return `CARTAO_CREDITO_${p}X`;
+  };
+
   const handleSave = async () => {
     if (cart.length === 0) {
       setError('Adicione pelo menos um produto ao carrinho.');
       return;
     }
+
+    if (!paymentMethod) {
+      setError('Selecione a forma de pagamento.');
+      return;
+    }
+
+    if (paymentMethod === 'CARTAO' && !cardType) {
+      setError('Selecione Crédito ou Débito.');
+      return;
+    }
+
+    if (paymentMethod === 'DINHEIRO') {
+      if (cashReceived.trim() === '') {
+        setError('Informe o valor recebido no dinheiro.');
+        return;
+      }
+      if (cashReceivedNum + 0.000001 < total) {
+        setError(`Valor recebido insuficiente. Falta ${formatCurrency(missing)}.`);
+        return;
+      }
+    }
+
     setIsSaving(true);
     setError('');
     try {
+      const finalPaymentMethod = getFinalPaymentMethod();
+
       const order: Partial<Order> = {
         client_id: selectedClientId,
-        total_amount: total, // ✅ total líquido
+        total_amount: total,
         status: OrderStatus.COMPLETED,
         salesperson: 'Administrador',
-        payment_method: 'DINHEIRO'
+        payment_method: finalPaymentMethod
       };
 
       const items: Partial<OrderItem>[] = cart.map((item) => {
@@ -413,8 +482,8 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
           product_id: item.product.id,
           quantity: item.qty,
           unit_price: item.product.price,
-          discount: discVal, // ✅ valor do desconto da linha (R$)
-          total_price: lineTotal, // ✅ total líquido da linha
+          discount: discVal,
+          total_price: lineTotal,
           name: item.product.name
         };
       });
@@ -430,6 +499,11 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
     }
   };
 
+  const disableFinalize =
+    isSaving ||
+    cart.length === 0 ||
+    (paymentMethod === 'DINHEIRO' && cashReceived.trim() !== '' && cashReceivedNum + 0.000001 < total);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
@@ -442,7 +516,7 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
             <div>
               <h3 className="text-xl font-black uppercase tracking-tight">Nova Venda (PDV)</h3>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                Carrinho • Desconto • Total líquido
+                Carrinho • Desconto • Pagamento
               </p>
             </div>
           </div>
@@ -640,7 +714,6 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                         </div>
 
                         <div className="mt-3 grid grid-cols-2 gap-3">
-                          {/* Quantidade */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <button
@@ -665,7 +738,6 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                             </div>
                           </div>
 
-                          {/* Desconto rápido */}
                           <div className="flex items-center justify-end gap-2">
                             <div className="flex items-center gap-2 bg-slate-950/40 border border-slate-700/30 rounded-xl px-3 py-2">
                               <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">%</span>
@@ -688,7 +760,6 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                           </div>
                         </div>
 
-                        {/* Linha de cálculo rápido */}
                         <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                           <span>Subtotal: {formatCurrency(lineSubtotal)}</span>
                           <span>Desc: {formatCurrency(discVal)}</span>
@@ -796,6 +867,133 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
             )}
 
             <div className="pt-6 border-t border-slate-800">
+              {/* ✅ Pagamento */}
+              <div className="mb-6 p-4 rounded-2xl bg-slate-950/30 border border-slate-800">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Forma de pagamento</p>
+
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full p-4 bg-slate-900/60 border border-slate-700/40 rounded-2xl text-xs font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-brand-500/10"
+                  disabled={isSaving}
+                >
+                  {PAYMENT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+
+                {/* ✅ DINHEIRO: valor recebido + troco */}
+                {paymentMethod === 'DINHEIRO' && (
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                        Valor recebido (R$)
+                      </label>
+                      <input
+                        value={cashReceived}
+                        onChange={(e) => setCashReceived(e.target.value)}
+                        className="w-full p-4 bg-slate-900/60 border border-slate-700/40 rounded-2xl text-xs font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-emerald-500/10"
+                        placeholder="Ex: 100,00"
+                        inputMode="decimal"
+                        disabled={isSaving}
+                      />
+                      <p className="mt-2 text-[10px] font-bold text-slate-500">
+                        Total a pagar: <span className="text-white font-black">{formatCurrency(total)}</span>
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                        <p className="text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-1">Troco</p>
+                        <p className="text-sm font-black text-emerald-200">
+                          {cashReceived.trim() ? formatCurrency(change) : formatCurrency(0)}
+                        </p>
+                      </div>
+
+                      <div className={`p-3 rounded-2xl border ${cashReceived.trim() && missing > 0 ? 'bg-rose-500/10 border-rose-500/20' : 'bg-slate-950/30 border-slate-800'}`}>
+                        <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${cashReceived.trim() && missing > 0 ? 'text-rose-300' : 'text-slate-500'}`}>
+                          Falta
+                        </p>
+                        <p className={`text-sm font-black ${cashReceived.trim() && missing > 0 ? 'text-rose-200' : 'text-slate-200'}`}>
+                          {cashReceived.trim() ? formatCurrency(missing) : formatCurrency(0)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {cashReceived.trim() !== '' && missing > 0 && (
+                      <p className="text-[10px] font-black uppercase tracking-widest text-rose-300">
+                        Valor insuficiente para finalizar.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* ✅ CARTÃO: crédito/débito + parcelas */}
+                {paymentMethod === 'CARTAO' && (
+                  <div className="mt-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCardType('DEBITO')}
+                        className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border transition-all ${
+                          cardType === 'DEBITO'
+                            ? 'bg-white text-slate-900 border-white'
+                            : 'bg-slate-900/50 text-slate-300 border-slate-700/40 hover:bg-slate-900/70'
+                        }`}
+                        disabled={isSaving}
+                      >
+                        Débito
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setCardType('CREDITO')}
+                        className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border transition-all ${
+                          cardType === 'CREDITO'
+                            ? 'bg-emerald-500 text-slate-900 border-emerald-500'
+                            : 'bg-slate-900/50 text-slate-300 border-slate-700/40 hover:bg-slate-900/70'
+                        }`}
+                        disabled={isSaving}
+                      >
+                        Crédito
+                      </button>
+                    </div>
+
+                    {cardType === 'CREDITO' ? (
+                      <div>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                          Parcelas
+                        </label>
+                        <select
+                          value={installments}
+                          onChange={(e) => setInstallments(Number(e.target.value))}
+                          className="w-full p-4 bg-slate-900/60 border border-slate-700/40 rounded-2xl text-xs font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-emerald-500/10"
+                          disabled={isSaving}
+                        >
+                          {INSTALLMENT_OPTIONS.map((n) => (
+                            <option key={n} value={n}>
+                              {n}x
+                            </option>
+                          ))}
+                        </select>
+
+                        <p className="mt-2 text-[10px] font-bold text-slate-500">
+                          Será salvo como:{' '}
+                          <span className="text-slate-200 font-black">CARTAO_CREDITO_{Math.max(1, Math.min(12, installments))}X</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] font-bold text-slate-500">
+                        Débito será salvo como: <span className="text-slate-200 font-black">CARTAO_DEBITO</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Resumo */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="p-3 rounded-2xl bg-slate-950/30 border border-slate-800">
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Subtotal</p>
@@ -813,9 +1011,10 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
 
               <button
                 onClick={handleSave}
-                disabled={isSaving || cart.length === 0}
+                disabled={disableFinalize}
                 className="w-full py-5 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-brand-600/30 transition-all hover:bg-brand-700 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                 type="button"
+                title={paymentMethod === 'DINHEIRO' && cashReceived.trim() !== '' && missing > 0 ? 'Valor recebido insuficiente' : 'Finalizar venda'}
               >
                 {isSaving ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
                 {isSaving ? 'PROCESSANDO...' : 'FINALIZAR VENDA'}
