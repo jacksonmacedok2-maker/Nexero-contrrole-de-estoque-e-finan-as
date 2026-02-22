@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   Trash2,
   X,
-  Minus
+  Minus,
+  RotateCcw
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import { OrderStatus, OrderItem, Product, Client, Order } from '../types';
@@ -221,16 +222,41 @@ const clampPct = (v: any) => {
   return Math.max(0, Math.min(100, raw));
 };
 
+const parseMoneyInput = (v: any) => {
+  const s = (v ?? '').toString().trim().replace(',', '.');
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
 const getRecommendedPct = (p: any) => {
   const v = Number(p?.recommended_discount_pct || 0);
   if (!Number.isFinite(v)) return 0;
   return Math.max(0, Math.min(100, v));
 };
 
-const parseMoneyInput = (v: any) => {
-  const s = (v ?? '').toString().trim().replace(',', '.');
-  const n = parseFloat(s);
-  return Number.isFinite(n) ? n : 0;
+const formatPaymentMethod = (raw: any) => {
+  const s = String(raw || '').toUpperCase().trim();
+
+  if (!s) return '—';
+
+  if (s === 'DINHEIRO') return 'Dinheiro';
+  if (s === 'PIX') return 'Pix';
+  if (s === 'TRANSFERENCIA') return 'Transferência';
+  if (s === 'BOLETO') return 'Boleto';
+  if (s === 'FIADO') return 'Fiado / À prazo';
+
+  if (s === 'CARTAO') return 'Cartão';
+  if (s === 'CARTAO_DEBITO') return 'Cartão débito';
+
+  // CARTAO_CREDITO_3X
+  if (s.startsWith('CARTAO_CREDITO_')) {
+    const part = s.replace('CARTAO_CREDITO_', '');
+    return `Cartão crédito (${part.toLowerCase()})`;
+  }
+
+  return raw;
 };
 
 const PAYMENT_OPTIONS = [
@@ -259,12 +285,15 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
   const [rightTab, setRightTab] = useState<'CART' | 'DISCOUNT'>('CART');
 
   const [paymentMethod, setPaymentMethod] = useState<string>('DINHEIRO');
-
   const [cardType, setCardType] = useState<'CREDITO' | 'DEBITO'>('DEBITO');
   const [installments, setInstallments] = useState<number>(1);
 
-  // ✅ NOVO: dinheiro (valor recebido / troco)
+  // ✅ dinheiro (valor recebido / troco)
   const [cashReceived, setCashReceived] = useState<string>('');
+
+  // ✅ DESCONTO GERAL
+  const [globalDiscountPct, setGlobalDiscountPct] = useState<string>(''); // %
+  const [globalDiscountValue, setGlobalDiscountValue] = useState<string>(''); // R$
 
   // ✅ novo cliente
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
@@ -292,7 +321,6 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
     }
   }, [paymentMethod, cardType]);
 
-  // ✅ se mudar forma de pagamento, limpa erros e, se não for dinheiro, limpa cashReceived
   useEffect(() => {
     setError('');
     if (paymentMethod !== 'DINHEIRO') setCashReceived('');
@@ -304,12 +332,28 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
   };
 
   const getLineSubtotal = (item: CartItem) => item.product.price * item.qty;
-  const getLineDiscountValue = (item: CartItem) => getLineSubtotal(item) * (clampPct(item.discountPct) / 100);
-  const getLineTotal = (item: CartItem) => Math.max(0, getLineSubtotal(item) - getLineDiscountValue(item));
+  const getLineItemDiscount = (item: CartItem) => getLineSubtotal(item) * (clampPct(item.discountPct) / 100);
+  const getLineNetAfterItemDiscount = (item: CartItem) => Math.max(0, getLineSubtotal(item) - getLineItemDiscount(item));
 
-  const subtotal = cart.reduce((sum, item) => sum + getLineSubtotal(item), 0);
-  const totalDiscount = cart.reduce((sum, item) => sum + getLineDiscountValue(item), 0);
-  const total = cart.reduce((sum, item) => sum + getLineTotal(item), 0);
+  const itemsSubtotal = cart.reduce((sum, item) => sum + getLineSubtotal(item), 0);
+  const itemsDiscount = cart.reduce((sum, item) => sum + getLineItemDiscount(item), 0);
+
+  const baseNet = cart.reduce((sum, item) => sum + getLineNetAfterItemDiscount(item), 0);
+
+  // ✅ calcula desconto geral (percent tem prioridade se preenchido; senão valor)
+  const globalPctNum = clampPct(globalDiscountPct);
+  const globalValueNumInput = parseMoneyInput(globalDiscountValue);
+
+  let computedGlobalDiscount = 0;
+  if (globalDiscountPct.trim() !== '') {
+    computedGlobalDiscount = round2(baseNet * (globalPctNum / 100));
+  } else if (globalDiscountValue.trim() !== '') {
+    computedGlobalDiscount = round2(globalValueNumInput);
+  }
+  computedGlobalDiscount = Math.max(0, Math.min(baseNet, computedGlobalDiscount));
+
+  const totalDiscount = round2(itemsDiscount + computedGlobalDiscount);
+  const total = round2(Math.max(0, baseNet - computedGlobalDiscount));
 
   const cashReceivedNum = parseMoneyInput(cashReceived);
   const change = Math.max(0, cashReceivedNum - total);
@@ -433,6 +477,43 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
     return `CARTAO_CREDITO_${p}X`;
   };
 
+  const distributeGlobalDiscount = () => {
+    // Distribui "computedGlobalDiscount" proporcionalmente pelo líquido de cada item (após desconto do item).
+    // Retorna: mapa por productId => parte do desconto geral
+    const lineNets = cart.map((c) => ({
+      id: c.product.id,
+      net: round2(getLineNetAfterItemDiscount(c))
+    }));
+
+    const totalNet = round2(lineNets.reduce((acc, cur) => acc + cur.net, 0));
+    const gd = round2(computedGlobalDiscount);
+
+    const map: Record<string, number> = {};
+    if (gd <= 0 || totalNet <= 0) {
+      for (const ln of lineNets) map[ln.id] = 0;
+      return map;
+    }
+
+    // distribuição com arredondamento em centavos e ajuste no último
+    let allocated = 0;
+    for (let i = 0; i < lineNets.length; i++) {
+      const ln = lineNets[i];
+
+      if (i === lineNets.length - 1) {
+        const last = round2(Math.max(0, gd - allocated));
+        map[ln.id] = last;
+        allocated = round2(allocated + last);
+        break;
+      }
+
+      const share = round2((ln.net / totalNet) * gd);
+      map[ln.id] = share;
+      allocated = round2(allocated + share);
+    }
+
+    return map;
+  };
+
   const handleSave = async () => {
     if (cart.length === 0) {
       setError('Adicione pelo menos um produto ao carrinho.');
@@ -467,23 +548,30 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
 
       const order: Partial<Order> = {
         client_id: selectedClientId,
-        total_amount: total,
+        total_amount: total, // ✅ total líquido final (já com desconto geral)
         status: OrderStatus.COMPLETED,
         salesperson: 'Administrador',
         payment_method: finalPaymentMethod
       };
 
+      const globalMap = distributeGlobalDiscount();
+
       const items: Partial<OrderItem>[] = cart.map((item) => {
-        const lineSubtotal = getLineSubtotal(item);
-        const discVal = getLineDiscountValue(item);
-        const lineTotal = Math.max(0, lineSubtotal - discVal);
+        const lineSubtotal = round2(getLineSubtotal(item));
+        const itemDisc = round2(getLineItemDiscount(item));
+        const lineNet = round2(Math.max(0, lineSubtotal - itemDisc));
+
+        const shareGlobal = round2(globalMap[item.product.id] || 0);
+
+        const finalLineTotal = round2(Math.max(0, lineNet - shareGlobal));
+        const finalLineDiscount = round2(itemDisc + shareGlobal);
 
         return {
           product_id: item.product.id,
           quantity: item.qty,
           unit_price: item.product.price,
-          discount: discVal,
-          total_price: lineTotal,
+          discount: finalLineDiscount, // ✅ desconto total do item (item + geral)
+          total_price: finalLineTotal, // ✅ líquido final do item
           name: item.product.name
         };
       });
@@ -686,9 +774,9 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
               <>
                 <div className="flex-1 space-y-4 overflow-y-auto mb-8 pr-2 custom-scrollbar min-h-[200px]">
                   {cart.map((item) => {
-                    const lineSubtotal = getLineSubtotal(item);
-                    const discVal = getLineDiscountValue(item);
-                    const lineTotal = getLineTotal(item);
+                    const lineSubtotal = round2(getLineSubtotal(item));
+                    const itemDisc = round2(getLineItemDiscount(item));
+                    const lineNet = round2(getLineNetAfterItemDiscount(item));
 
                     return (
                       <div key={item.product.id} className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/30">
@@ -699,8 +787,8 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                           </div>
 
                           <div className="text-right">
-                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Total</p>
-                            <span className="text-xs font-black">{formatCurrency(lineTotal)}</span>
+                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Líquido</p>
+                            <span className="text-xs font-black">{formatCurrency(lineNet)}</span>
                           </div>
 
                           <button
@@ -761,9 +849,9 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                         </div>
 
                         <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                          <span>Subtotal: {formatCurrency(lineSubtotal)}</span>
-                          <span>Desc: {formatCurrency(discVal)}</span>
-                          <span>Líquido: {formatCurrency(lineTotal)}</span>
+                          <span>Sub: {formatCurrency(lineSubtotal)}</span>
+                          <span>Desc item: {formatCurrency(itemDisc)}</span>
+                          <span>Líquido: {formatCurrency(lineNet)}</span>
                         </div>
                       </div>
                     );
@@ -783,13 +871,94 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
               <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                 <div className="mb-6 p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300 mb-1">
-                    Cálculo rápido
+                    Descontos
                   </p>
                   <p className="text-xs text-emerald-200/80 font-bold">
-                    Digite o % por item e veja instantaneamente o valor do desconto e o preço líquido.
+                    Item por item + desconto geral (no total da venda).
                   </p>
                 </div>
 
+                {/* ✅ Desconto geral */}
+                <div className="mb-5 bg-slate-800/50 p-4 rounded-2xl border border-slate-700/30">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
+                    Desconto geral (opcional)
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                        %
+                      </label>
+                      <input
+                        value={globalDiscountPct}
+                        onChange={(e) => {
+                          setGlobalDiscountPct(e.target.value);
+                          if (e.target.value.trim() !== '') setGlobalDiscountValue('');
+                        }}
+                        className="w-full p-4 bg-slate-900/60 border border-slate-700/40 rounded-2xl text-xs font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-emerald-500/10"
+                        placeholder="Ex: 5"
+                        inputMode="decimal"
+                        disabled={isSaving}
+                      />
+                      <p className="mt-2 text-[10px] font-bold text-slate-500">
+                        Aplica em cima do líquido (após desconto dos itens).
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                        R$
+                      </label>
+                      <input
+                        value={globalDiscountValue}
+                        onChange={(e) => {
+                          setGlobalDiscountValue(e.target.value);
+                          if (e.target.value.trim() !== '') setGlobalDiscountPct('');
+                        }}
+                        className="w-full p-4 bg-slate-900/60 border border-slate-700/40 rounded-2xl text-xs font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-emerald-500/10"
+                        placeholder="Ex: 10,00"
+                        inputMode="decimal"
+                        disabled={isSaving}
+                      />
+                      <p className="mt-2 text-[10px] font-bold text-slate-500">
+                        Limitado ao total líquido.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-2xl bg-slate-950/30 border border-slate-800">
+                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Líquido base</p>
+                      <p className="text-sm font-black text-slate-200">{formatCurrency(baseNet)}</p>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                      <p className="text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-1">Desc geral</p>
+                      <p className="text-sm font-black text-emerald-200">{formatCurrency(computedGlobalDiscount)}</p>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-white/10 border border-white/10">
+                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Total final</p>
+                      <p className="text-sm font-black text-white">{formatCurrency(total)}</p>
+                    </div>
+                  </div>
+
+                  {(globalDiscountPct.trim() !== '' || globalDiscountValue.trim() !== '') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGlobalDiscountPct('');
+                        setGlobalDiscountValue('');
+                      }}
+                      className="mt-4 w-full py-3 rounded-2xl bg-slate-900/60 border border-slate-700/40 text-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all"
+                      disabled={isSaving}
+                    >
+                      Limpar desconto geral
+                    </button>
+                  )}
+                </div>
+
+                {/* Itens (revisão de desconto) */}
                 <div className="space-y-3">
                   {cart.length === 0 ? (
                     <div className="h-40 flex flex-col items-center justify-center opacity-30 italic py-10">
@@ -802,8 +971,6 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                       const pct = clampPct(item.discountPct);
                       const unitDisc = item.product.price * (pct / 100);
                       const unitNet = Math.max(0, item.product.price - unitDisc);
-                      const lineDisc = getLineDiscountValue(item);
-                      const lineNet = getLineTotal(item);
 
                       return (
                         <div key={item.product.id} className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/30">
@@ -849,13 +1016,9 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                             </div>
 
                             <div className="p-3 rounded-xl bg-slate-950/30 border border-slate-700/20">
-                              <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Total da linha</p>
-                              <p className="text-slate-200">
-                                Desc: <span className="text-emerald-300">{formatCurrency(lineDisc)}</span>
-                              </p>
-                              <p className="text-slate-200">
-                                Líquido: <span className="text-white font-black">{formatCurrency(lineNet)}</span>
-                              </p>
+                              <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Resumo</p>
+                              <p className="text-slate-200">Sub: {formatCurrency(getLineSubtotal(item))}</p>
+                              <p className="text-slate-200">Desc item: {formatCurrency(getLineItemDiscount(item))}</p>
                             </div>
                           </div>
                         </div>
@@ -884,7 +1047,7 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                   ))}
                 </select>
 
-                {/* ✅ DINHEIRO: valor recebido + troco */}
+                {/* DINHEIRO */}
                 {paymentMethod === 'DINHEIRO' && (
                   <div className="mt-4 space-y-3">
                     <div>
@@ -912,11 +1075,25 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                         </p>
                       </div>
 
-                      <div className={`p-3 rounded-2xl border ${cashReceived.trim() && missing > 0 ? 'bg-rose-500/10 border-rose-500/20' : 'bg-slate-950/30 border-slate-800'}`}>
-                        <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${cashReceived.trim() && missing > 0 ? 'text-rose-300' : 'text-slate-500'}`}>
+                      <div
+                        className={`p-3 rounded-2xl border ${
+                          cashReceived.trim() && missing > 0
+                            ? 'bg-rose-500/10 border-rose-500/20'
+                            : 'bg-slate-950/30 border-slate-800'
+                        }`}
+                      >
+                        <p
+                          className={`text-[9px] font-black uppercase tracking-widest mb-1 ${
+                            cashReceived.trim() && missing > 0 ? 'text-rose-300' : 'text-slate-500'
+                          }`}
+                        >
                           Falta
                         </p>
-                        <p className={`text-sm font-black ${cashReceived.trim() && missing > 0 ? 'text-rose-200' : 'text-slate-200'}`}>
+                        <p
+                          className={`text-sm font-black ${
+                            cashReceived.trim() && missing > 0 ? 'text-rose-200' : 'text-slate-200'
+                          }`}
+                        >
                           {cashReceived.trim() ? formatCurrency(missing) : formatCurrency(0)}
                         </p>
                       </div>
@@ -930,7 +1107,7 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                   </div>
                 )}
 
-                {/* ✅ CARTÃO: crédito/débito + parcelas */}
+                {/* CARTÃO */}
                 {paymentMethod === 'CARTAO' && (
                   <div className="mt-4 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
@@ -981,7 +1158,9 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
 
                         <p className="mt-2 text-[10px] font-bold text-slate-500">
                           Será salvo como:{' '}
-                          <span className="text-slate-200 font-black">CARTAO_CREDITO_{Math.max(1, Math.min(12, installments))}X</span>
+                          <span className="text-slate-200 font-black">
+                            CARTAO_CREDITO_{Math.max(1, Math.min(12, installments))}X
+                          </span>
                         </p>
                       </div>
                     ) : (
@@ -997,7 +1176,7 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="p-3 rounded-2xl bg-slate-950/30 border border-slate-800">
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Subtotal</p>
-                  <p className="text-sm font-black">{formatCurrency(subtotal)}</p>
+                  <p className="text-sm font-black">{formatCurrency(itemsSubtotal)}</p>
                 </div>
                 <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
                   <p className="text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-1">Descontos</p>
@@ -1035,6 +1214,14 @@ const OrderDetailsModal: React.FC<{
 }> = ({ companyId, order, onClose, onRefresh }) => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // ✅ devolução parcial
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [isReturning, setIsReturning] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnQty, setReturnQty] = useState<Record<string, string>>({}); // order_item_id => "2"
+  const [returnError, setReturnError] = useState('');
+
   const [error, setError] = useState('');
   const [reason, setReason] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -1042,6 +1229,26 @@ const OrderDetailsModal: React.FC<{
 
   const items = Array.isArray(order?.order_items) ? order.order_items : [];
   const isCancelled = String(order?.status || '').toUpperCase() === 'CANCELLED';
+  const paymentLabel = formatPaymentMethod(order?.payment_method);
+
+  const normalizeInt = (v: any) => {
+    const n = parseInt(String(v ?? '').replace(/[^\d]/g, ''), 10);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const getUnitRefund = (it: any) => {
+    const q = Number(it?.quantity || 0);
+    if (!q) return 0;
+    const total = Number(it?.total_price || 0);
+    return total / q;
+  };
+
+  const estimatedRefund = items.reduce((acc: number, it: any) => {
+    const q = normalizeInt(returnQty[it.id]);
+    if (q <= 0) return acc;
+    const unit = getUnitRefund(it);
+    return acc + unit * q;
+  }, 0);
 
   const handleCancel = async () => {
     setIsCancelling(true);
@@ -1073,6 +1280,49 @@ const OrderDetailsModal: React.FC<{
     }
   };
 
+  const handleReturnItems = async () => {
+    setIsReturning(true);
+    setReturnError('');
+    setError('');
+
+    try {
+      const payload = items
+        .map((it: any) => ({
+          order_item_id: it.id,
+          quantity: normalizeInt(returnQty[it.id])
+        }))
+        .filter((x) => x.quantity > 0);
+
+      if (payload.length === 0) {
+        setReturnError('Selecione ao menos 1 item e informe a quantidade.');
+        setIsReturning(false);
+        return;
+      }
+
+      // validação simples: não deixa maior que a quantidade do item (o RPC também valida)
+      for (const p of payload) {
+        const it = items.find((x: any) => x.id === p.order_item_id);
+        const max = Number(it?.quantity || 0);
+        if (p.quantity > max) {
+          throw new Error(`Quantidade inválida para "${it?.name || 'Item'}". Máx: ${max}.`);
+        }
+      }
+
+      await (db as any).orders.returnItems(order.id, companyId, payload, returnReason || null);
+
+      await onRefresh();
+      setReturnOpen(false);
+      setReturnReason('');
+      setReturnQty({});
+      onClose();
+    } catch (e: any) {
+      const msg = e?.message || 'Erro ao processar devolução.';
+      setReturnError(msg);
+    } finally {
+      setIsReturning(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
@@ -1085,13 +1335,17 @@ const OrderDetailsModal: React.FC<{
             <h3 className="text-xl font-black uppercase tracking-tight">
               {order.clients?.name || 'Cliente Avulso'}
             </h3>
+
+            {/* ✅ agora mostra pagamento */}
             <p className="text-xs text-slate-500 mt-1">
-              {formatDate(order.created_at)} • {formatCurrency(order.total_amount)} • Status:{' '}
+              {formatDate(order.created_at)} • {formatCurrency(order.total_amount)} • Pagamento:{' '}
+              <span className="font-black">{paymentLabel}</span> • Status:{' '}
               <span className={`font-black ${isCancelled ? 'text-rose-600 dark:text-rose-400' : ''}`}>
                 {order.status}
               </span>
             </p>
           </div>
+
           <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
             <X size={20} />
           </button>
@@ -1103,6 +1357,24 @@ const OrderDetailsModal: React.FC<{
               <AlertCircle size={18} /> {error}
             </div>
           )}
+
+          {/* ✅ resumo bonito */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total</p>
+              <p className="text-lg font-black text-slate-900 dark:text-white">{formatCurrency(order.total_amount)}</p>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Pagamento</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">{paymentLabel}</p>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Itens</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">{items.length}</p>
+            </div>
+          </div>
 
           <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-4">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Itens do pedido</p>
@@ -1120,6 +1392,7 @@ const OrderDetailsModal: React.FC<{
                       <p className="text-xs font-black uppercase truncate">{it.name || 'Item'}</p>
                       <p className="text-[10px] text-slate-500 font-bold">
                         {it.quantity}x • {formatCurrency(it.unit_price)}
+                        {Number(it.discount || 0) > 0 ? <span className="ml-2 text-emerald-600 font-black">• Desc: {formatCurrency(it.discount)}</span> : null}
                       </p>
                     </div>
                     <div className="text-xs font-black">{formatCurrency(Number(it.total_price || 0))}</div>
@@ -1129,22 +1402,34 @@ const OrderDetailsModal: React.FC<{
             </div>
           </div>
 
+          {/* ✅ Troca/Devolução */}
           {!isCancelled && (
             <div className="bg-amber-50/60 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 p-4 rounded-2xl">
               <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-2">
-                Cancelamento
+                Troca / Devolução
               </p>
               <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mb-3">
-                Cancelar a venda irá <span className="font-black">estornar o estoque automaticamente</span>.
+                Você pode fazer <span className="font-black">devolução parcial</span> (itens/quantidades) ou
+                <span className="font-black"> devolução total</span> (cancela e estorna tudo).
               </p>
 
-              <button
-                onClick={() => setConfirmOpen(true)}
-                className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all flex items-center justify-center gap-2"
-                type="button"
-              >
-                <Trash2 size={18} /> Cancelar Venda
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  onClick={() => setReturnOpen(true)}
+                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 hover:bg-slate-950 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  type="button"
+                >
+                  <RotateCcw size={18} /> Devolução Parcial
+                </button>
+
+                <button
+                  onClick={() => setConfirmOpen(true)}
+                  className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  type="button"
+                >
+                  <Trash2 size={18} /> Cancelar / Devolver Total
+                </button>
+              </div>
             </div>
           )}
 
@@ -1174,6 +1459,139 @@ const OrderDetailsModal: React.FC<{
           )}
         </div>
 
+        {/* ✅ Modal Devolução Parcial */}
+        {returnOpen && (
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !isReturning && setReturnOpen(false)} />
+            <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="text-lg font-black uppercase tracking-tight">Devolução parcial</h4>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                    Estorna estoque + registra valor devolvido
+                  </p>
+                </div>
+                <button
+                  onClick={() => !isReturning && setReturnOpen(false)}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {returnError && (
+                <div className="mb-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-4 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold">
+                  <AlertCircle size={18} /> {returnError}
+                </div>
+              )}
+
+              <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                {items.length === 0 ? (
+                  <div className="p-6 text-center text-slate-500">Sem itens para devolver.</div>
+                ) : (
+                  items.map((it: any) => {
+                    const max = Number(it?.quantity || 0);
+                    const unit = getUnitRefund(it);
+                    const q = normalizeInt(returnQty[it.id]);
+                    const line = unit * q;
+
+                    return (
+                      <div
+                        key={it.id}
+                        className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-black uppercase truncate text-slate-900 dark:text-white">
+                              {it.name || 'Item'}
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-500">
+                              Vendido: {max} un • Unit ref.: {formatCurrency(unit)}
+                            </p>
+                          </div>
+
+                          <div className="w-32">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                              Qtd devolver
+                            </label>
+                            <input
+                              value={returnQty[it.id] ?? ''}
+                              onChange={(e) => {
+                                setReturnError('');
+                                setReturnQty((p) => ({ ...p, [it.id]: e.target.value }));
+                              }}
+                              placeholder="0"
+                              inputMode="numeric"
+                              className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10"
+                              disabled={isReturning}
+                            />
+                            <p className="mt-2 text-[10px] font-bold text-slate-500">
+                              Máx: <span className="font-black">{max}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-slate-500">
+                          <span>Estimativa</span>
+                          <span className="text-slate-900 dark:text-white font-black">
+                            {q > 0 ? formatCurrency(line) : formatCurrency(0)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="mt-4">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-1">
+                  Motivo (opcional)
+                </label>
+                <textarea
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  className="w-full min-h-[90px] p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10"
+                  placeholder="Ex: troca / defeito / devolução parcial..."
+                  disabled={isReturning}
+                />
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor estimado</p>
+                  <p className="text-lg font-black text-slate-900 dark:text-white">{formatCurrency(estimatedRefund)}</p>
+                  <p className="mt-1 text-[10px] font-bold text-slate-500">
+                    (valor final é calculado no servidor)
+                  </p>
+                </div>
+
+                <div className="flex items-end gap-2">
+                  <button
+                    onClick={() => setReturnOpen(false)}
+                    disabled={isReturning}
+                    className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all disabled:opacity-60"
+                    type="button"
+                  >
+                    Voltar
+                  </button>
+
+                  <button
+                    onClick={handleReturnItems}
+                    disabled={isReturning}
+                    className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 hover:bg-slate-950 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                    type="button"
+                    title="Confirmar devolução parcial"
+                  >
+                    {isReturning ? <Loader2 className="animate-spin" size={18} /> : <RotateCcw size={18} />}
+                    {isReturning ? 'PROCESSANDO...' : 'CONFIRMAR'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* confirmar cancelamento */}
         {confirmOpen && (
           <div className="absolute inset-0 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setConfirmOpen(false)} />
@@ -1226,6 +1644,7 @@ const OrderDetailsModal: React.FC<{
           </div>
         )}
 
+        {/* confirmar delete */}
         {deleteConfirmOpen && (
           <div className="absolute inset-0 flex items-center justify-center p-4">
             <div

@@ -352,6 +352,35 @@ export const db = {
       });
 
       if (error) throw new Error(error.message);
+    },
+
+    // ✅ NOVO: devolução parcial (RPC no Supabase)
+    async returnItems(
+      orderId: string,
+      companyId: string,
+      items: { order_item_id: string; quantity: number }[],
+      reason: string | null = null
+    ): Promise<string> {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('Não autenticado');
+
+      if (!navigator.onLine) throw new Error('Sem internet. Conecte para processar devolução.');
+
+      const payload = (items || [])
+        .filter((x) => x && x.order_item_id && Number(x.quantity) > 0)
+        .map((x) => ({ order_item_id: x.order_item_id, quantity: Number(x.quantity) }));
+
+      if (payload.length === 0) throw new Error('Selecione ao menos 1 item para devolução.');
+
+      const { data, error } = await supabase.rpc('return_order_items_with_stock', {
+        p_order_id: orderId,
+        p_company_id: companyId,
+        p_reason: reason,
+        p_items: payload
+      });
+
+      if (error) throw new Error(error.message);
+      return data as any;
     }
   },
 
