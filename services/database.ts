@@ -40,6 +40,9 @@ const localStore = {
 };
 
 export const db = {
+  // ✅ EXPOSTO: Inventory.tsx consegue usar db.supabase diretamente
+  supabase,
+
   async syncPendingData() {
     if (!navigator.onLine) return;
     const queue = localStore.get(STORAGE_KEYS.SYNC_QUEUE) || [];
@@ -338,7 +341,6 @@ export const db = {
       if (error) throw new Error(error.message);
     },
 
-    // ✅ NOVO: remove do histórico (só se CANCELLED)
     async remove(orderId: string, companyId: string) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error('Não autenticado');
@@ -354,7 +356,6 @@ export const db = {
       if (error) throw new Error(error.message);
     },
 
-    // ✅ NOVO: devolução parcial (RPC no Supabase)
     async returnItems(
       orderId: string,
       companyId: string,
