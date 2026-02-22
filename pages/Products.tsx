@@ -358,57 +358,71 @@ const Products: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {filtered.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group"
-                >
-                  <div className="relative h-48 bg-slate-100 dark:bg-slate-800">
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300">
-                        <Package size={48} />
-                      </div>
-                    )}
+              {filtered.map((product) => {
+                const recPct = Number(product?.recommended_discount_pct || 0) || 0;
 
-                    {Number(product.stock || 0) <= 0 && (
-                      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center">
-                        <span className="bg-rose-500 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest">Sem Estoque</span>
-                      </div>
-                    )}
+                return (
+                  <div
+                    key={product.id}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group"
+                  >
+                    <div className="relative h-48 bg-slate-100 dark:bg-slate-800">
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                          <Package size={48} />
+                        </div>
+                      )}
 
-                    <div className="absolute top-3 right-3">
-                      <button
-                        onClick={(e) => openFloatingMenu(e, product)}
-                        className="p-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur shadow-sm rounded-lg text-slate-600 dark:text-slate-400 hover:text-indigo-600 transition-colors"
-                        type="button"
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                    </div>
-                  </div>
+                      {Number(product.stock || 0) <= 0 && (
+                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center">
+                          <span className="bg-rose-500 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest">Sem Estoque</span>
+                        </div>
+                      )}
 
-                  <div className="p-5">
-                    <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
-                      {product.category || 'Sem Categoria'}
-                    </p>
-                    <h4 className="font-black text-slate-800 dark:text-white mb-1 line-clamp-1">{product.name}</h4>
-                    <p className="text-xs text-slate-500 mb-4 uppercase">SKU: {product.sku || 'N/A'}</p>
-
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="text-xs text-slate-400 font-medium">Preço Venda</p>
-                        <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(product.price)}</p>
-                      </div>
-                      <div className={`text-right ${Number(product.stock || 0) < Number(product.min_stock || 0) ? 'text-amber-600' : 'text-slate-500'}`}>
-                        <p className="text-[10px] font-black uppercase tracking-tighter">Estoque</p>
-                        <p className="text-sm font-black">{product.stock} un</p>
+                      <div className="absolute top-3 right-3">
+                        <button
+                          onClick={(e) => openFloatingMenu(e, product)}
+                          className="p-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur shadow-sm rounded-lg text-slate-600 dark:text-slate-400 hover:text-indigo-600 transition-colors"
+                          type="button"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
                       </div>
                     </div>
+
+                    <div className="p-5">
+                      <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
+                        {product.category || 'Sem Categoria'}
+                      </p>
+
+                      {/* ✅ mini badge do desconto recomendado */}
+                      {recPct > 0 && (
+                        <div className="mb-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-500/20 text-[9px] font-black uppercase tracking-widest">
+                            Desc. rec: {recPct}%
+                          </span>
+                        </div>
+                      )}
+
+                      <h4 className="font-black text-slate-800 dark:text-white mb-1 line-clamp-1">{product.name}</h4>
+                      <p className="text-xs text-slate-500 mb-4 uppercase">SKU: {product.sku || 'N/A'}</p>
+
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-xs text-slate-400 font-medium">Preço Venda</p>
+                          <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(product.price)}</p>
+                        </div>
+                        <div className={`text-right ${Number(product.stock || 0) < Number(product.min_stock || 0) ? 'text-amber-600' : 'text-slate-500'}`}>
+                          <p className="text-[10px] font-black uppercase tracking-tighter">Estoque</p>
+                          <p className="text-sm font-black">{product.stock} un</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -547,7 +561,7 @@ const CategoriesModal: React.FC<{
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
-  const [editingOldName, setEditingOldName] = useState(''); // ✅ guarda o nome antigo
+  const [editingOldName, setEditingOldName] = useState('');
 
   const [confirmDelete, setConfirmDelete] = useState<CategoryRow | null>(null);
 
@@ -579,11 +593,9 @@ const CategoriesModal: React.FC<{
 
     setBusy(true);
     try {
-      // 1) renomeia a categoria
       const { error } = await supabase.from('product_categories').update({ name: nextName }).eq('id', editingId).eq('company_id', companyId);
       if (error) throw new Error(error.message);
 
-      // 2) ✅ atualiza produtos antigos (text field)
       if (oldName && oldName !== nextName) {
         const { error: prodErr } = await supabase
           .from('products')
@@ -719,7 +731,7 @@ const CategoriesModal: React.FC<{
                             onClick={() => {
                               setEditingId(c.id);
                               setEditingName(c.name);
-                              setEditingOldName(c.name); // ✅ guarda o valor antigo
+                              setEditingOldName(c.name);
                             }}
                             className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600"
                             type="button"
@@ -806,7 +818,9 @@ const ProductModal: React.FC<{
     stock: product?.stock?.toString?.() ?? '',
     min_stock: product?.min_stock?.toString?.() ?? '5',
     category: normalizeCat(product?.category || ''),
-    image_url: product?.image_url || ''
+    image_url: product?.image_url || '',
+    // ✅ NOVO
+    recommended_discount_pct: (product?.recommended_discount_pct ?? 0)?.toString?.() ?? '0'
   });
 
   useEffect(() => {
@@ -822,7 +836,8 @@ const ProductModal: React.FC<{
       stock: product?.stock?.toString?.() ?? '',
       min_stock: product?.min_stock?.toString?.() ?? '5',
       category: normalizeCat(product?.category || ''),
-      image_url: product?.image_url || ''
+      image_url: product?.image_url || '',
+      recommended_discount_pct: (product?.recommended_discount_pct ?? 0)?.toString?.() ?? '0'
     });
   }, [product]);
 
@@ -892,6 +907,9 @@ const ProductModal: React.FC<{
     try {
       const uploadedUrl = await uploadImageIfNeeded();
 
+      const rawPct = parseFloat((formData.recommended_discount_pct || '').toString().replace(',', '.'));
+      const pctSafe = Number.isFinite(rawPct) ? Math.max(0, Math.min(100, rawPct)) : 0;
+
       const payload = {
         name: formData.name,
         sku: (formData.sku || '').toUpperCase(),
@@ -899,7 +917,9 @@ const ProductModal: React.FC<{
         stock: parseInt(formData.stock),
         min_stock: parseInt(formData.min_stock || '0'),
         category: normalizeCat(formData.category) || null,
-        image_url: (uploadedUrl || formData.image_url || '').trim() || null
+        image_url: (uploadedUrl || formData.image_url || '').trim() || null,
+        // ✅ NOVO
+        recommended_discount_pct: pctSafe
       };
 
       if (editing && product?.id) {
@@ -1090,6 +1110,27 @@ const ProductModal: React.FC<{
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     disabled={isSaving}
                   />
+                </div>
+
+                {/* ✅ NOVO: desconto recomendado */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+                    Desconto recomendado (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    max={100}
+                    className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                    value={formData.recommended_discount_pct}
+                    onChange={(e) => setFormData({ ...formData, recommended_discount_pct: e.target.value })}
+                    disabled={isSaving}
+                    placeholder="Ex: 5"
+                  />
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Esse % aparece sugerido na hora da venda (mas poderá ser alterado manualmente).
+                  </p>
                 </div>
 
                 <div className="space-y-2">

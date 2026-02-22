@@ -172,7 +172,6 @@ export const db = {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error('Usuário não autenticado');
 
-      // nunca deixar passar id/PK
       const safeClient: any = { ...(client as any) };
       delete safeClient.id;
       delete safeClient.created_at;
@@ -283,7 +282,6 @@ export const db = {
       return `PED-${nextVal.toString().padStart(6, '0')}`;
     },
 
-    // ✅ cria pedido + itens + baixa estoque via RPC (transacional)
     async create(order: Partial<Order>, items: OrderItem[], companyId: string) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error('Não autenticado');
@@ -324,7 +322,6 @@ export const db = {
       } as any;
     },
 
-    // ✅ cancela pedido + estorna estoque via RPC
     async cancel(orderId: string, companyId: string, reason: string | null = null) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error('Não autenticado');
@@ -336,6 +333,22 @@ export const db = {
         p_company_id: companyId,
         p_user_id: session.user.id,
         p_reason: reason
+      });
+
+      if (error) throw new Error(error.message);
+    },
+
+    // ✅ NOVO: remove do histórico (só se CANCELLED)
+    async remove(orderId: string, companyId: string) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('Não autenticado');
+
+      if (!navigator.onLine) return;
+
+      const { error } = await supabase.rpc('delete_order_with_items', {
+        p_order_id: orderId,
+        p_company_id: companyId,
+        p_user_id: session.user.id
       });
 
       if (error) throw new Error(error.message);
