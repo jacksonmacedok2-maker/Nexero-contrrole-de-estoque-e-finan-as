@@ -26,6 +26,9 @@ const Orders: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // ✅ modal de detalhes
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+
   const fetchOrders = async () => {
     if (!companyId) return;
     try {
@@ -140,7 +143,10 @@ const Orders: React.FC = () => {
                 >
                   <Printer size={16} /> <span className="text-[9px] font-black uppercase">Recibo</span>
                 </button>
-                <button className="flex-1 py-3 bg-slate-50 dark:bg-slate-800 text-slate-500 rounded-xl flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setSelectedOrder(order)}
+                  className="flex-1 py-3 bg-slate-50 dark:bg-slate-800 text-slate-500 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-100 transition-colors"
+                >
                   <MoreHorizontal size={16} /> <span className="text-[9px] font-black uppercase">Detalhes</span>
                 </button>
               </div>
@@ -159,6 +165,15 @@ const Orders: React.FC = () => {
       {isModalOpen && companyId && (
         <OrderModal companyId={companyId} onClose={() => setIsModalOpen(false)} onRefresh={fetchOrders} />
       )}
+
+      {selectedOrder && companyId && (
+        <OrderDetailsModal
+          companyId={companyId}
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onRefresh={fetchOrders}
+        />
+      )}
     </div>
   );
 };
@@ -170,6 +185,7 @@ const getStatusStyle = (status: OrderStatus) => {
     case OrderStatus.DRAFT:
       return 'text-slate-400 bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700';
     default:
+      // inclui CANCELLED e outros
       return 'text-amber-500 bg-amber-50 border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20';
   }
 };
@@ -210,10 +226,26 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
 
   const total = cart.reduce((sum, item) => sum + item.product.price * item.qty, 0);
 
+  const getProductStock = (productId: string) => {
+    const p = products.find((x) => x.id === productId);
+    return typeof (p as any)?.stock === 'number' ? (p as any).stock : 0;
+  };
+
   const addToCart = (p: Product) => {
+    setError('');
+    const available = typeof (p as any)?.stock === 'number' ? (p as any).stock : 0;
+    if (available <= 0) {
+      setError(`Sem estoque para "${p.name}".`);
+      return;
+    }
+
     setCart((prev) => {
       const existing = prev.find((c) => c.product.id === p.id);
       if (existing) {
+        if (existing.qty >= available) {
+          setError(`Estoque insuficiente para "${p.name}". Disponível: ${available} un.`);
+          return prev;
+        }
         return prev.map((c) => (c.product.id === p.id ? { ...c, qty: c.qty + 1 } : c));
       }
       return [...prev, { product: p, qty: 1 }];
@@ -221,10 +253,23 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
   };
 
   const incQty = (productId: string) => {
-    setCart((prev) => prev.map((c) => (c.product.id === productId ? { ...c, qty: c.qty + 1 } : c)));
+    setError('');
+    setCart((prev) => {
+      const existing = prev.find((c) => c.product.id === productId);
+      if (!existing) return prev;
+
+      const available = getProductStock(productId);
+      if (existing.qty >= available) {
+        setError(`Estoque insuficiente para "${existing.product.name}". Disponível: ${available} un.`);
+        return prev;
+      }
+
+      return prev.map((c) => (c.product.id === productId ? { ...c, qty: c.qty + 1 } : c));
+    });
   };
 
   const decQty = (productId: string) => {
+    setError('');
     setCart((prev) =>
       prev
         .map((c) => (c.product.id === productId ? { ...c, qty: c.qty - 1 } : c))
@@ -233,6 +278,7 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
   };
 
   const removeFromCart = (productId: string) => {
+    setError('');
     setCart((prev) => prev.filter((c) => c.product.id !== productId));
   };
 
@@ -254,7 +300,6 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
         companyId
       );
 
-      // se o db.clients.create não retornar nada por algum motivo, recarrega lista
       if (!created?.id) {
         const refreshed = await db.clients.getAll(companyId);
         setClients(refreshed);
@@ -304,7 +349,9 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
         name: item.product.name
       }));
 
+      // ✅ cria + baixa estoque via RPC no db.orders.create
       await db.orders.create(order, items as OrderItem[], companyId);
+
       onRefresh();
       onClose();
     } catch (err: any) {
@@ -429,17 +476,17 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                 {products.map((p) => (
                   <button
                     key={p.id}
-                    disabled={p.stock <= 0}
+                    disabled={(p as any).stock <= 0}
                     onClick={() => addToCart(p)}
                     className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${
-                      p.stock <= 0
+                      (p as any).stock <= 0
                         ? 'opacity-50 grayscale cursor-not-allowed border-transparent'
                         : 'bg-slate-50 dark:bg-slate-800/50 border-transparent hover:border-brand-500/50 hover:bg-white dark:hover:bg-slate-800'
                     }`}
                   >
                     <div>
                       <p className="text-xs font-black uppercase tracking-tight">{p.name}</p>
-                      <p className="text-[10px] text-slate-500">Estoque: {p.stock} un</p>
+                      <p className="text-[10px] text-slate-500">Estoque: {(p as any).stock} un</p>
                     </div>
                     <span className="text-sm font-black text-brand-600">{formatCurrency(p.price)}</span>
                   </button>
@@ -526,6 +573,178 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const OrderDetailsModal: React.FC<{
+  companyId: string;
+  order: any;
+  onClose: () => void;
+  onRefresh: () => void;
+}> = ({ companyId, order, onClose, onRefresh }) => {
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [error, setError] = useState('');
+  const [reason, setReason] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const items = Array.isArray(order?.order_items) ? order.order_items : [];
+  const isCancelled = String(order?.status || '').toUpperCase() === 'CANCELLED';
+
+  const handleCancel = async () => {
+    setIsCancelling(true);
+    setError('');
+    try {
+      await db.orders.cancel(order.id, companyId, reason || null);
+      await onRefresh();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao cancelar o pedido.');
+    } finally {
+      setIsCancelling(false);
+      setConfirmOpen(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-900 w-full max-w-3xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+        <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+          <div>
+            <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">
+              #{order.code || order.id.substring(0, 8).toUpperCase()}
+            </p>
+            <h3 className="text-xl font-black uppercase tracking-tight">
+              {order.clients?.name || 'Cliente Avulso'}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              {formatDate(order.created_at)} • {formatCurrency(order.total_amount)} • Status:{' '}
+              <span className="font-black">{order.status}</span>
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {error && (
+            <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-4 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold">
+              <AlertCircle size={18} /> {error}
+            </div>
+          )}
+
+          <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 p-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Itens do pedido</p>
+
+            <div className="space-y-2">
+              {items.length === 0 ? (
+                <p className="text-sm text-slate-500">Nenhum item encontrado.</p>
+              ) : (
+                items.map((it: any, idx: number) => (
+                  <div
+                    key={it.id || idx}
+                    className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase truncate">{it.name || 'Item'}</p>
+                      <p className="text-[10px] text-slate-500 font-bold">
+                        {it.quantity}x • {formatCurrency(it.unit_price)}
+                      </p>
+                    </div>
+                    <div className="text-xs font-black">{formatCurrency(Number(it.total_price || 0))}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {!isCancelled && (
+            <div className="bg-amber-50/60 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 p-4 rounded-2xl">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-2">
+                Cancelamento
+              </p>
+              <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mb-3">
+                Cancelar a venda irá <span className="font-black">estornar o estoque automaticamente</span>.
+              </p>
+
+              <button
+                onClick={() => setConfirmOpen(true)}
+                className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                type="button"
+              >
+                <Trash2 size={18} /> Cancelar Venda
+              </button>
+            </div>
+          )}
+
+          {isCancelled && (
+            <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 p-4 rounded-2xl">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">
+                Este pedido está cancelado.
+              </p>
+              {order.cancelled_reason && (
+                <p className="text-xs text-slate-500">
+                  Motivo: <span className="font-bold">{order.cancelled_reason}</span>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {confirmOpen && (
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setConfirmOpen(false)} />
+            <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-6">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-lg font-black uppercase tracking-tight">Confirmar cancelamento</h4>
+                <button
+                  onClick={() => setConfirmOpen(false)}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-500 mb-4">
+                Isso vai marcar a venda como <span className="font-black">CANCELLED</span> e devolver o estoque dos itens.
+              </p>
+
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-1">
+                Motivo (opcional)
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full min-h-[90px] p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-rose-500/20"
+                placeholder="Ex: cliente desistiu / erro na cobrança / item indisponível..."
+              />
+
+              <div className="mt-5 flex gap-2">
+                <button
+                  onClick={() => setConfirmOpen(false)}
+                  className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all"
+                  type="button"
+                  disabled={isCancelling}
+                >
+                  Voltar
+                </button>
+
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 py-4 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  type="button"
+                  disabled={isCancelling}
+                >
+                  {isCancelling ? <Loader2 className="animate-spin" size={18} /> : <Trash2 size={18} />}
+                  {isCancelling ? 'CANCELANDO...' : 'CONFIRMAR'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

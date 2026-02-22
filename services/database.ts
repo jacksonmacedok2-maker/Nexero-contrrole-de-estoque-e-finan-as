@@ -283,7 +283,7 @@ export const db = {
       return `PED-${nextVal.toString().padStart(6, '0')}`;
     },
 
-    // ✅ ALTERAÇÃO MÍNIMA: rollback se falhar ao inserir itens
+    // ✅ cria pedido + itens + baixa estoque via RPC (transacional)
     async create(order: Partial<Order>, items: OrderItem[], companyId: string) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error('Não autenticado');
@@ -292,34 +292,53 @@ export const db = {
 
       const code = await this.getNextCode(companyId);
 
-      // 1) cria o pedido
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          ...order,
-          code,
-          user_id: session.user.id,
-          company_id: companyId
-        }])
-        .select()
-        .single();
+      const payloadItems = items.map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        discount: (item as any).discount ?? 0,
+        total_price: item.total_price,
+        name: (item as any).name ?? null
+      }));
 
-      if (orderError) throw orderError;
+      const { data: orderId, error } = await supabase.rpc('create_order_with_stock', {
+        p_company_id: companyId,
+        p_user_id: session.user.id,
+        p_client_id: order.client_id || null,
+        p_code: code,
+        p_total_amount: order.total_amount || 0,
+        p_status: (order.status as any) || 'COMPLETED',
+        p_salesperson: (order as any).salesperson || null,
+        p_payment_method: (order as any).payment_method || null,
+        p_items: payloadItems
+      });
 
-      // 2) tenta criar itens
-      const itemsToInsert = items.map((item) => ({ ...item, order_id: orderData.id }));
+      if (error) throw new Error(error.message);
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(itemsToInsert);
+      return {
+        id: orderId,
+        ...order,
+        code,
+        company_id: companyId,
+        user_id: session.user.id
+      } as any;
+    },
 
-      // 3) se falhar, apaga o pedido (rollback)
-      if (itemsError) {
-        await supabase.from('orders').delete().eq('id', orderData.id);
-        throw itemsError;
-      }
+    // ✅ cancela pedido + estorna estoque via RPC
+    async cancel(orderId: string, companyId: string, reason: string | null = null) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('Não autenticado');
 
-      return orderData;
+      if (!navigator.onLine) return;
+
+      const { error } = await supabase.rpc('cancel_order_with_stock', {
+        p_order_id: orderId,
+        p_company_id: companyId,
+        p_user_id: session.user.id,
+        p_reason: reason
+      });
+
+      if (error) throw new Error(error.message);
     }
   },
 

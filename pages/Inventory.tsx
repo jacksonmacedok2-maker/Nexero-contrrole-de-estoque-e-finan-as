@@ -1,19 +1,21 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, ArrowUpRight, ArrowDownLeft, AlertTriangle, Package, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../utils/helpers';
 import { db } from '../services/database';
 import { Product } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 const Inventory: React.FC = () => {
+  const { companyId } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchInventory = async () => {
+    if (!companyId) return;
     try {
       setLoading(true);
-      const data = await db.products.getAll();
+      const data = await db.products.getAll(companyId);
       setProducts(data);
     } catch (err) {
       console.error("Erro ao carregar estoque:", err);
@@ -24,13 +26,13 @@ const Inventory: React.FC = () => {
 
   useEffect(() => {
     fetchInventory();
-  }, []);
+  }, [companyId]);
 
   const totalValue = products.reduce((acc, p) => acc + (Number(p.price) * Number(p.stock)), 0);
   const itemsBelowMin = products.filter(p => p.stock <= p.min_stock).length;
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = products.filter(p =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -72,16 +74,16 @@ const Inventory: React.FC = () => {
         <div className="p-4 border-b dark:border-slate-800 flex items-center gap-4 bg-slate-50/50 dark:bg-slate-800/20">
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
-            <input 
-              type="text" 
-              placeholder="Buscar produto por nome ou SKU..." 
+            <input
+              type="text"
+              placeholder="Buscar produto por nome ou SKU..."
               className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           {loading ? (
             <div className="p-20 text-center">

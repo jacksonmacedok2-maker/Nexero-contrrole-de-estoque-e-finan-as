@@ -246,7 +246,10 @@ const Products: React.FC = () => {
           categories={categories}
           loading={categoriesLoading}
           onClose={() => setIsCategoriesOpen(false)}
-          onRefresh={fetchCategories}
+          onRefresh={async () => {
+            await fetchCategories();
+            await fetchProducts(); // ✅ para refletir rename nos cards imediatamente
+          }}
           onToast={showToast}
           friendlyError={friendlyError}
         />
@@ -535,7 +538,7 @@ const CategoriesModal: React.FC<{
   categories: CategoryRow[];
   loading: boolean;
   onClose: () => void;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void> | void;
   onToast: (type: 'success' | 'error', message: string) => void;
   friendlyError: (msg: string) => string;
 }> = ({ companyId, categories, loading, onClose, onRefresh, onToast, friendlyError }) => {
@@ -544,6 +547,7 @@ const CategoriesModal: React.FC<{
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [editingOldName, setEditingOldName] = useState(''); // ✅ guarda o nome antigo
 
   const [confirmDelete, setConfirmDelete] = useState<CategoryRow | null>(null);
 
@@ -568,16 +572,32 @@ const CategoriesModal: React.FC<{
 
   const saveRename = async () => {
     if (!editingId) return;
-    const name = normalizeCat(editingName);
-    if (!name) return;
+    const nextName = normalizeCat(editingName);
+    const oldName = normalizeCat(editingOldName);
+
+    if (!nextName) return;
 
     setBusy(true);
     try {
-      const { error } = await supabase.from('product_categories').update({ name }).eq('id', editingId).eq('company_id', companyId);
+      // 1) renomeia a categoria
+      const { error } = await supabase.from('product_categories').update({ name: nextName }).eq('id', editingId).eq('company_id', companyId);
       if (error) throw new Error(error.message);
+
+      // 2) ✅ atualiza produtos antigos (text field)
+      if (oldName && oldName !== nextName) {
+        const { error: prodErr } = await supabase
+          .from('products')
+          .update({ category: nextName })
+          .eq('company_id', companyId)
+          .eq('category', oldName);
+
+        if (prodErr) throw new Error(prodErr.message);
+      }
+
       setEditingId(null);
       setEditingName('');
-      onToast('success', 'Categoria renomeada.');
+      setEditingOldName('');
+      onToast('success', 'Categoria renomeada (produtos atualizados).');
       await onRefresh();
     } catch (e: any) {
       const msg = friendlyError(e?.message || '');
@@ -680,6 +700,7 @@ const CategoriesModal: React.FC<{
                             if (busy) return;
                             setEditingId(null);
                             setEditingName('');
+                            setEditingOldName('');
                           }}
                           className="px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white"
                           type="button"
@@ -698,6 +719,7 @@ const CategoriesModal: React.FC<{
                             onClick={() => {
                               setEditingId(c.id);
                               setEditingName(c.name);
+                              setEditingOldName(c.name); // ✅ guarda o valor antigo
                             }}
                             className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600"
                             type="button"
