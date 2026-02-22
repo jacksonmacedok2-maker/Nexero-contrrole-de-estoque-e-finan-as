@@ -1,15 +1,31 @@
-
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, User, Building, Search, ArrowLeft, Landmark, Loader2, Zap, Cpu, Shield, Check, KeyRound, ArrowRight, Inbox, RefreshCw, Info } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  AlertCircle,
+  Search,
+  ArrowLeft,
+  Loader2,
+  Zap,
+  Check,
+  Inbox,
+  RefreshCw,
+  Info
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchCnpjData } from '../utils/helpers';
 import { supabase } from '../services/supabase';
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'WAITING_CONFIRMATION';
 
+const BRAND_HEX = '#007FFF';
+
 const Login: React.FC = () => {
   const { login, signUp, resendConfirmation, resetPassword, isAuthenticated, refreshMembership } = useAuth();
-  
+
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -22,7 +38,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const [signupData, setSignupData] = useState({
     name: '',
     email: '',
@@ -39,8 +55,7 @@ const Login: React.FC = () => {
     const invitedEmail = params.get('email');
     const invitedName = params.get('name');
     const token = params.get('token');
-    
-    // Armazena o token de convite no localStorage para persistência (caso precise confirmar e-mail)
+
     if (token) {
       localStorage.setItem('nexero_invite_token', token);
     }
@@ -48,9 +63,9 @@ const Login: React.FC = () => {
     if (forcedMode === 'SIGNUP') {
       setMode('SIGNUP');
       if (invitedEmail) {
-        setSignupData(prev => ({ 
-          ...prev, 
-          email: invitedEmail, 
+        setSignupData((prev) => ({
+          ...prev,
+          email: invitedEmail,
           name: invitedName || '',
           companyName: 'Equipe Nexero'
         }));
@@ -67,6 +82,7 @@ const Login: React.FC = () => {
         }, 1500);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   const handlePostAuthInvite = async () => {
@@ -74,16 +90,13 @@ const Login: React.FC = () => {
     if (!token) return;
 
     try {
-      console.log('Detectado convite pendente. Processando vinculação...');
-      const { data, error: rpcError } = await supabase.rpc('accept_invitation', { 
-        p_token: token 
+      const { error: rpcError } = await supabase.rpc('accept_invitation', {
+        p_token: token
       });
 
       if (rpcError) throw rpcError;
-      
-      console.log('Convite aceito com sucesso!');
+
       localStorage.removeItem('nexero_invite_token');
-      // Atualiza o contexto para carregar os dados da nova empresa vinculada
       await refreshMembership();
     } catch (err) {
       console.error('Erro ao aceitar convite automaticamente:', err);
@@ -100,10 +113,9 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+
     try {
       await login(email, password);
-      // O useEffect detectará o isAuthenticated e chamará handlePostAuthInvite
     } catch (err: any) {
       setError(err.message || 'Erro ao realizar login. Verifique suas credenciais.');
       setIsLoading(false);
@@ -120,10 +132,10 @@ const Login: React.FC = () => {
       setError('As senhas não coincidem.');
       return;
     }
-    
+
     setIsLoading(true);
     setError('');
-    
+
     try {
       const metadata = {
         name: signupData.name,
@@ -134,12 +146,11 @@ const Login: React.FC = () => {
       };
 
       const needsConfirmation = await signUp(signupData.email, signupData.password, metadata);
-      
+
       if (needsConfirmation) {
         setIsLoading(false);
         setMode('WAITING_CONFIRMATION');
       } else {
-        // Se logou direto (sem confirmação), o flow segue via useEffect/isAuthenticated
         setSuccessMessage('Conta configurada com sucesso!');
       }
     } catch (err: any) {
@@ -185,10 +196,12 @@ const Login: React.FC = () => {
 
     try {
       const data = await fetchCnpjData(cleanCnpj);
-      setSignupData(prev => ({
+      setSignupData((prev) => ({
         ...prev,
         companyName: data.razao_social || data.nome_fantasia || '',
-        phone: data.ddd_telefone_1 ? `(${data.ddd_telefone_1.substring(0,2)}) ${data.ddd_telefone_1.substring(2)}` : prev.phone,
+        phone: data.ddd_telefone_1
+          ? `(${data.ddd_telefone_1.substring(0, 2)}) ${data.ddd_telefone_1.substring(2)}`
+          : prev.phone,
         email: data.email || prev.email
       }));
     } catch (err: any) {
@@ -234,11 +247,19 @@ const Login: React.FC = () => {
             </div>
             <h1 className="text-4xl font-black tracking-tighter uppercase">NEXERO</h1>
           </div>
+
           <div className="space-y-10">
             <h2 className="text-7xl font-black leading-[0.9] tracking-tighter">
-              Gestão <br/><span className="text-brand-500">Inteligente.</span>
+              Gestão <br />
+              {/* ✅ aqui estava puxando pro teal: agora é azul fixo */}
+              <span style={{ color: BRAND_HEX }}>Inteligente.</span>
             </h2>
-            <p className="text-xl text-slate-400 font-medium max-w-md leading-relaxed italic border-l-4 border-brand-600 pl-6">
+
+            {/* ✅ barra lateral também azul fixo */}
+            <p
+              className="text-xl text-slate-400 font-medium max-w-md leading-relaxed italic pl-6"
+              style={{ borderLeft: `4px solid ${BRAND_HEX}` }}
+            >
               A evolução do seu negócio começa com dados precisos.
             </p>
           </div>
@@ -248,7 +269,6 @@ const Login: React.FC = () => {
       {/* Auth Content */}
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 md:p-12 overflow-y-auto bg-white dark:bg-slate-950">
         <div className="w-full max-w-md space-y-8 py-8">
-          
           <div className="text-center md:text-left">
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -256,9 +276,13 @@ const Login: React.FC = () => {
                   {mode === 'LOGIN' ? 'Login' : mode === 'SIGNUP' ? 'Cadastro' : mode === 'WAITING_CONFIRMATION' ? 'Quase lá' : 'Senha'}
                 </h3>
               </div>
-              {(mode !== 'LOGIN' && mode !== 'WAITING_CONFIRMATION') && (
-                <button 
-                  onClick={() => { setMode('LOGIN'); resetUIStates(); }} 
+
+              {mode !== 'LOGIN' && mode !== 'WAITING_CONFIRMATION' && (
+                <button
+                  onClick={() => {
+                    setMode('LOGIN');
+                    resetUIStates();
+                  }}
                   className="text-brand-600 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:opacity-70 transition-all py-2"
                 >
                   <ArrowLeft size={14} /> Voltar
@@ -288,50 +312,134 @@ const Login: React.FC = () => {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">E-mail</label>
                   <div className="relative">
                     <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input type="email" required placeholder="seu@email.com" className="w-full pl-14 pr-5 py-5 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-brand-600 rounded-3xl focus:outline-none transition-all text-slate-800 dark:text-white font-bold" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <input
+                      type="email"
+                      required
+                      placeholder="seu@email.com"
+                      className="w-full pl-14 pr-5 py-5 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-brand-600 rounded-3xl focus:outline-none transition-all text-slate-800 dark:text-white font-bold"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha</label>
-                    <button type="button" onClick={() => setMode('FORGOT_PASSWORD')} className="text-[9px] font-black text-brand-600 uppercase tracking-widest">Esqueceu?</button>
+                    <button type="button" onClick={() => setMode('FORGOT_PASSWORD')} className="text-[9px] font-black text-brand-600 uppercase tracking-widest">
+                      Esqueceu?
+                    </button>
                   </div>
                   <div className="relative">
                     <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input type={showPassword ? "text" : "password"} required placeholder="••••••••" className="w-full pl-14 pr-14 py-5 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-brand-600 rounded-3xl focus:outline-none transition-all text-slate-800 dark:text-white font-bold" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="••••••••"
+                      className="w-full pl-14 pr-14 py-5 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-brand-600 rounded-3xl focus:outline-none transition-all text-slate-800 dark:text-white font-bold"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600">
                       {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
                     </button>
                   </div>
                 </div>
-                <button type="submit" disabled={isLoading} className="w-full py-6 bg-brand-600 text-white rounded-3xl font-black text-xs flex items-center justify-center gap-4 shadow-xl shadow-brand-600/20 active:scale-95 transition-all uppercase tracking-widest">
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-6 bg-brand-600 text-white rounded-3xl font-black text-xs flex items-center justify-center gap-4 shadow-xl shadow-brand-600/20 active:scale-95 transition-all uppercase tracking-widest"
+                >
                   {isLoading ? <Loader2 className="animate-spin" /> : <>Acessar Nexero</>}
                 </button>
-                <button type="button" onClick={() => setMode('SIGNUP')} className="w-full py-5 border-2 border-slate-100 dark:border-slate-800 text-slate-800 dark:text-white rounded-3xl font-black text-[10px] uppercase tracking-widest">Criar Nova Conta</button>
+
+                <button
+                  type="button"
+                  onClick={() => setMode('SIGNUP')}
+                  className="w-full py-5 border-2 border-slate-100 dark:border-slate-800 text-slate-800 dark:text-white rounded-3xl font-black text-[10px] uppercase tracking-widest"
+                >
+                  Criar Nova Conta
+                </button>
               </form>
             )}
 
             {mode === 'SIGNUP' && (
               <form onSubmit={handleSignupSubmit} className="space-y-6">
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl">
-                  <button type="button" onClick={() => setDocumentType('CNPJ')} className={`flex-1 py-3 text-[9px] font-black rounded-xl transition-all uppercase tracking-widest ${documentType === 'CNPJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`}>CNPJ</button>
-                  <button type="button" onClick={() => setDocumentType('CPF')} className={`flex-1 py-3 text-[9px] font-black rounded-xl transition-all uppercase tracking-widest ${documentType === 'CPF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`}>CPF</button>
+                  <button
+                    type="button"
+                    onClick={() => setDocumentType('CNPJ')}
+                    className={`flex-1 py-3 text-[9px] font-black rounded-xl transition-all uppercase tracking-widest ${
+                      documentType === 'CNPJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'
+                    }`}
+                  >
+                    CNPJ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDocumentType('CPF')}
+                    className={`flex-1 py-3 text-[9px] font-black rounded-xl transition-all uppercase tracking-widest ${
+                      documentType === 'CPF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'
+                    }`}
+                  >
+                    CPF
+                  </button>
                 </div>
 
                 <div className="space-y-4">
-                  <InputField label={documentType} value={signupData.document} onChange={(e: any) => setSignupData({...signupData, document: e.target.value})} placeholder={documentType === 'CNPJ' ? "00.000.000/0001-00" : "000.000.000-00"} />
+                  <InputField
+                    label={documentType}
+                    value={signupData.document}
+                    onChange={(e: any) => setSignupData({ ...signupData, document: e.target.value })}
+                    placeholder={documentType === 'CNPJ' ? '00.000.000/0001-00' : '000.000.000-00'}
+                  />
+
                   {documentType === 'CNPJ' && isCnpjReady && (
-                    <button type="button" onClick={lookupCnpj} disabled={isSearchingCnpj} className="w-full py-3 bg-brand-50 text-brand-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={lookupCnpj}
+                      disabled={isSearchingCnpj}
+                      className="w-full py-3 bg-brand-50 text-brand-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+                    >
                       {isSearchingCnpj ? <Loader2 className="animate-spin" size={14} /> : <Search size={14} />} Buscar Dados da Empresa
                     </button>
                   )}
-                  <InputField label="Nome / Empresa" value={signupData.companyName} onChange={(e: any) => setSignupData({...signupData, companyName: e.target.value, name: e.target.value})} placeholder="Ex: Nexero LTDA" />
-                  <InputField label="E-mail" type="email" value={signupData.email} onChange={(e: any) => setSignupData({...signupData, email: e.target.value})} placeholder="seu@email.com" />
-                  <InputField label="Senha" type="password" value={signupData.password} onChange={(e: any) => setSignupData({...signupData, password: e.target.value})} placeholder="Mín. 6 caracteres" />
-                  <InputField label="Confirmar Senha" type="password" value={signupData.confirmPassword} onChange={(e: any) => setSignupData({...signupData, confirmPassword: e.target.value})} placeholder="Repita a senha" />
+
+                  <InputField
+                    label="Nome / Empresa"
+                    value={signupData.companyName}
+                    onChange={(e: any) => setSignupData({ ...signupData, companyName: e.target.value, name: e.target.value })}
+                    placeholder="Ex: Nexero LTDA"
+                  />
+                  <InputField
+                    label="E-mail"
+                    type="email"
+                    value={signupData.email}
+                    onChange={(e: any) => setSignupData({ ...signupData, email: e.target.value })}
+                    placeholder="seu@email.com"
+                  />
+                  <InputField
+                    label="Senha"
+                    type="password"
+                    value={signupData.password}
+                    onChange={(e: any) => setSignupData({ ...signupData, password: e.target.value })}
+                    placeholder="Mín. 6 caracteres"
+                  />
+                  <InputField
+                    label="Confirmar Senha"
+                    type="password"
+                    value={signupData.confirmPassword}
+                    onChange={(e: any) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
+                    placeholder="Repita a senha"
+                  />
                 </div>
 
-                <button type="submit" disabled={isLoading || showConfirmError} className="w-full py-6 bg-brand-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-600/20 active:scale-95 transition-all">
+                <button
+                  type="submit"
+                  disabled={isLoading || showConfirmError}
+                  className="w-full py-6 bg-brand-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-600/20 active:scale-95 transition-all"
+                >
                   {isLoading ? <Loader2 className="animate-spin" /> : 'Finalizar Cadastro'}
                 </button>
               </form>
@@ -344,9 +452,11 @@ const Login: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Confirme seu E-mail</h4>
-                  <p className="text-sm text-slate-500 mt-2 font-medium italic">Enviamos um link para: <span className="text-brand-600 font-black">{signupData.email}</span></p>
+                  <p className="text-sm text-slate-500 mt-2 font-medium italic">
+                    Enviamos um link para: <span className="text-brand-600 font-black">{signupData.email}</span>
+                  </p>
                 </div>
-                
+
                 <div className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-3xl border border-amber-100 text-left space-y-2">
                   <div className="flex items-center gap-2 text-amber-600 font-black text-[10px] uppercase tracking-widest">
                     <Info size={14} /> Importante
@@ -357,8 +467,14 @@ const Login: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <button onClick={() => { setEmail(signupData.email); setMode('LOGIN'); }} className="w-full py-5 bg-brand-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg">Já confirmei meu e-mail</button>
-                  <button onClick={handleResendEmail} disabled={isResending} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-brand-600 flex items-center justify-center gap-2 mx-auto">
+                  <button onClick={() => { setEmail(signupData.email); setMode('LOGIN'); }} className="w-full py-5 bg-brand-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-lg">
+                    Já confirmei meu e-mail
+                  </button>
+                  <button
+                    onClick={handleResendEmail}
+                    disabled={isResending}
+                    className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-brand-600 flex items-center justify-center gap-2 mx-auto"
+                  >
                     {isResending ? <RefreshCw className="animate-spin" size={12} /> : <RefreshCw size={12} />} Reenviar link de ativação
                   </button>
                 </div>
@@ -368,11 +484,13 @@ const Login: React.FC = () => {
             {mode === 'FORGOT_PASSWORD' && (
               <form onSubmit={handleForgotSubmit} className="space-y-6">
                 <InputField label="Seu E-mail" type="email" value={email} onChange={(e: any) => setEmail(e.target.value)} placeholder="seu@email.com" />
-                <button type="submit" disabled={isLoading} className="w-full py-6 bg-brand-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl">Enviar Link de Recuperação</button>
+                <button type="submit" disabled={isLoading} className="w-full py-6 bg-brand-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl">
+                  Enviar Link de Recuperação
+                </button>
               </form>
             )}
           </div>
-          
+
           <div className="text-center">
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Nexero Cloud Platform &copy; 2024</p>
           </div>
@@ -382,11 +500,11 @@ const Login: React.FC = () => {
   );
 };
 
-const InputField = ({ label, placeholder, value, onChange, type = "text" }: any) => (
+const InputField = ({ label, placeholder, value, onChange, type = 'text' }: any) => (
   <div className="space-y-1.5">
     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">{label}</label>
-    <input 
-      type={type} 
+    <input
+      type={type}
       required
       placeholder={placeholder}
       value={value}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -22,12 +21,48 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { db } from './services/database';
 import { Loader2, ShieldCheck, Cloud } from 'lucide-react';
 
+const BRAND = '#007FFF';
+
+const BrandOverrides: React.FC = () => {
+  // Força azul mesmo sem tailwind.config / sem css global
+  // (usa variables + overrides de classes mais usadas)
+  const css = `
+    :root{
+      --brand: ${BRAND};
+      --brand-50: ${BRAND}14;
+      --brand-100: ${BRAND}1f;
+      --brand-200: ${BRAND}2a;
+      --brand-300: ${BRAND}3d;
+      --brand-400: ${BRAND}66;
+      --brand-500: ${BRAND}b3;
+      --brand-600: ${BRAND};
+      --brand-700: ${BRAND};
+      --brand-800: ${BRAND};
+      --brand-900: ${BRAND};
+    }
+
+    /* Overrides de utilitários "brand" comuns (com !important) */
+    .bg-brand-600{ background-color:${BRAND} !important; }
+    .text-brand-600{ color:${BRAND} !important; }
+    .border-brand-600{ border-color:${BRAND} !important; }
+    .ring-brand-600{ --tw-ring-color:${BRAND} !important; }
+    .shadow-brand-600\\/30{ box-shadow: 0 18px 40px -22px ${BRAND}4d !important; }
+    .shadow-brand-600\\/25{ box-shadow: 0 18px 40px -22px ${BRAND}40 !important; }
+    .shadow-brand-600\\/20{ box-shadow: 0 18px 40px -22px ${BRAND}33 !important; }
+
+    /* Alguns padrões de foco */
+    .focus\\:ring-brand-600:focus{ --tw-ring-color:${BRAND} !important; }
+    .focus\\:border-brand-600:focus{ border-color:${BRAND} !important; }
+  `;
+  return <style>{css}</style>;
+};
+
 const AppContent: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>(() => {
     const hash = window.location.hash.replace('#', '');
     return hash || 'dashboard';
   });
-  
+
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const { isAuthenticated, logout, hasPermission, companyId, loadingCompany } = useAuth();
@@ -72,8 +107,7 @@ const AppContent: React.FC = () => {
     const path = window.location.pathname;
     const queryParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    
-    // Fix: Removed setActiveTab prop from Invite component (line 76) because the component in Invite.tsx is defined as not accepting any props.
+
     if (path.includes('/auth/invite')) return <Invite />;
     if (queryParams.has('error') || hashParams.has('error')) return <AuthError setActiveTab={() => navigateTo('dashboard')} />;
     if (queryParams.has('code') || hashParams.has('access_token')) return <AuthCallback setActiveTab={() => navigateTo('dashboard')} />;
@@ -83,21 +117,21 @@ const AppContent: React.FC = () => {
       return <Login />;
     }
 
-    // Gate 1: Se estiver buscando empresa no banco pela primeira vez
     if (loadingCompany && !companyId) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
           <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 bg-brand-600/10 rounded-2xl flex items-center justify-center text-brand-600 animate-bounce">
               <Cloud size={24} />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 animate-pulse">Sincronizando Organização...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 animate-pulse">
+              Sincronizando Organização...
+            </p>
           </div>
         </div>
       );
     }
 
-    // Gate 2: Usuário logado mas sem empresa vinculada
     if (!companyId) {
       return <CreateCompanyModal onSuccess={() => {}} />;
     }
@@ -132,7 +166,7 @@ const AppContent: React.FC = () => {
 
   if (isPlainPage) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-950">
+      <div className="min-h-screen bg-white">
         {renderContent()}
       </div>
     );
@@ -146,30 +180,33 @@ const AppContent: React.FC = () => {
           <span className="text-[10px] font-black uppercase tracking-widest">Cloud Sync...</span>
         </div>
       )}
-      <div className="pb-10 md:pb-0 h-full">
-        {renderContent()}
-      </div>
+      <div className="pb-10 md:pb-0 h-full">{renderContent()}</div>
     </Layout>
   );
 };
 
 const AccessDenied = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
-    <div className="w-20 h-20 bg-rose-50 dark:bg-rose-500/10 rounded-full flex items-center justify-center text-rose-500 mb-6">
+    <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mb-6">
       <ShieldCheck size={40} />
     </div>
-    <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic">Acesso Restrito</h2>
-    <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-2 italic font-medium">Você não possui as permissões necessárias para este módulo.</p>
+    <h2 className="text-2xl font-black text-slate-900 uppercase italic">Acesso Restrito</h2>
+    <p className="text-slate-500 max-w-xs mx-auto mt-2 italic font-medium">
+      Você não possui as permissões necessárias para este módulo.
+    </p>
   </div>
 );
 
 const App: React.FC = () => {
   return (
-    <AppSettingsProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </AppSettingsProvider>
+    <>
+      <BrandOverrides />
+      <AppSettingsProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </AppSettingsProvider>
+    </>
   );
 };
 

@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language, translations } from '../i18n/translations';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = 'light' | 'dark';
 
 interface AppSettings {
   theme: ThemeMode;
@@ -19,7 +18,8 @@ interface AppSettingsContextType {
 const STORAGE_KEY = 'app_settings_v1';
 
 const defaultSettings: AppSettings = {
-  theme: 'system',
+  // ✅ padrão agora é CLARO (branco)
+  theme: 'light',
   language: 'pt-BR',
   sidebarCompact: false,
 };
@@ -31,7 +31,16 @@ export const AppSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        return { ...defaultSettings, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+
+        // ✅ migração segura: qualquer valor desconhecido vira "light"
+        const migratedTheme: ThemeMode = parsed?.theme === 'dark' ? 'dark' : 'light';
+
+        return {
+          ...defaultSettings,
+          ...parsed,
+          theme: migratedTheme,
+        };
       } catch (e) {
         return defaultSettings;
       }
@@ -46,27 +55,12 @@ export const AppSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   useEffect(() => {
     const root = window.document.documentElement;
-    
-    const applyTheme = () => {
-      let activeTheme = settings.theme;
-      if (settings.theme === 'system') {
-        activeTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      }
-      
-      if (activeTheme === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    };
 
-    applyTheme();
-
-    if (settings.theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const listener = () => applyTheme();
-      mediaQuery.addEventListener('change', listener);
-      return () => mediaQuery.removeEventListener('change', listener);
+    // ✅ aplica somente light/dark (sem system)
+    if (settings.theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
     }
   }, [settings.theme]);
 
