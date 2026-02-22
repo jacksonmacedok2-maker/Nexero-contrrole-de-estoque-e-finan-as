@@ -34,9 +34,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
   const { user, hasPermission } = useAuth();
   const isCompact = settings.sidebarCompact;
 
-  const visibleNavItems = NAVIGATION_ITEMS.filter(
+  // ✅ Itens padrão + filtro por permissão
+  const baseNavItems = NAVIGATION_ITEMS.filter(
     (item) => !item.requiredPermission || hasPermission(item.requiredPermission)
   );
+
+  // ✅ FIX: se por algum motivo "settings" sumiu do NAVIGATION_ITEMS, adiciona aqui (fallback)
+  const visibleNavItems = (() => {
+    const items = [...baseNavItems];
+    const hasSettingsItem = items.some((i) => i.key === 'settings');
+
+    if (!hasSettingsItem && hasPermission('SETTINGS' as any)) {
+      items.push({
+        key: 'settings',
+        icon: <SettingsIcon size={20} />,
+        requiredPermission: 'SETTINGS'
+      } as any);
+    }
+
+    return items;
+  })();
 
   const bottomNavItems = [
     { key: 'dashboard', icon: <LayoutDashboard size={20} /> },
@@ -54,9 +71,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
   const BRAND_HEX = '#007FFF';
   const brandShadow = `${BRAND_HEX}33`;
 
-  // ✅ Ativo no modo claro: azulzinho discreto (Bling-like)
-  const activeBgLight = '#EAF4FF';     // azul bem claro
-  const activeBorderLight = '#CFE6FF'; // borda azul clara
+  // Ativo no modo claro: azul discreto
+  const activeBgLight = '#EAF4FF';
+  const activeBorderLight = '#CFE6FF';
 
   return (
     <div className="flex h-screen text-slate-900 dark:text-slate-100 overflow-hidden font-sans">
@@ -73,6 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
         />
       </div>
 
+      {/* Overlay Mobile */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] md:hidden animate-in fade-in duration-200"
@@ -80,6 +98,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
         />
       )}
 
+      {/* Sidebar */}
       <aside
         className={`
           fixed inset-y-0 left-0 z-[70] transform transition-all duration-300 ease-in-out md:relative md:translate-x-0
@@ -89,6 +108,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
         `}
       >
         <div className="h-full mx-3 my-3 rounded-[20px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+          {/* Brand */}
           <div
             className={`h-16 flex items-center px-5 border-b border-slate-200 dark:border-slate-800 justify-between ${
               isCompact ? 'md:justify-center' : ''
@@ -120,8 +140,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
             </button>
           </div>
 
+          {/* Nav */}
           <nav className="mt-3 px-2.5 space-y-2 flex-1 overflow-y-auto custom-scrollbar">
-            {visibleNavItems.map((item) => {
+            {visibleNavItems.map((item: any) => {
               const isActive = activeTab === item.key;
 
               return (
@@ -154,9 +175,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
 
                   {(!isCompact || isMobileMenuOpen) && (
                     <div className="flex-1 flex items-center justify-between min-w-0">
-                      <span className="truncate">{t(item.key as any)}</span>
+                      <span className="truncate">
+                        {typeof t === 'function' ? t(item.key as any) : item.key}
+                      </span>
 
-                      {/* ✅ pill discreta */}
                       {isActive && (
                         <span
                           className="ml-3 px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-white border border-slate-200"
@@ -172,6 +194,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
             })}
           </nav>
 
+          {/* Logout */}
           <div className="p-3 border-t border-slate-200 dark:border-slate-800">
             <button
               onClick={onLogout}
@@ -187,6 +210,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
         </div>
       </aside>
 
+      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
         <header className="h-14 md:h-16 px-4 md:px-6 z-30">
           <div className="h-full mt-3 rounded-[20px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between px-3 md:px-4">
@@ -251,6 +275,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
         <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6">{children}</main>
       </div>
 
+      {/* Bottom Nav Mobile */}
       <div className="fixed bottom-0 left-0 right-0 h-16 z-[60] md:hidden">
         <div className="mx-3 mb-3 rounded-[20px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm h-full flex items-center justify-around px-2">
           {bottomNavItems.map((item) => {
@@ -272,7 +297,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
                   <div style={isActive ? { color: BRAND_HEX } : undefined}>{item.icon}</div>
                 </div>
                 <span className="text-[8px] font-black uppercase tracking-widest leading-none">
-                  {t(item.key as any).substring(0, 8)}
+                  {typeof t === 'function' ? t(item.key as any).substring(0, 8) : item.key.substring(0, 8)}
                 </span>
                 {isActive && <div className="w-1 h-1 rounded-full absolute bottom-1" style={{ backgroundColor: BRAND_HEX }} />}
               </button>
@@ -281,6 +306,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
         </div>
       </div>
 
+      {/* Profile menu */}
       {isProfileOpen && (
         <div className="fixed inset-0 z-[100]" onClick={() => setIsProfileOpen(false)}>
           <div className="absolute top-16 right-4 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2">

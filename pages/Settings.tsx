@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Building2, Users, ShoppingBag, Box, Store, Wallet, Bell, Link2, Monitor, ChevronRight, Save, CheckCircle2, UserPlus, Trash2, Edit2, X, Lock, Cpu, Loader2, AlertCircle, ShoppingCart, Tag, CreditCard, Truck, Target, MapPin, Phone, Mail, Globe, Clock, Landmark, Camera } from 'lucide-react';
+import { Building2, Users, ShoppingBag, Box, Store, Wallet, Bell, Link2, Monitor, ChevronRight, Save, CheckCircle2, UserPlus, Trash2, Edit2, X, Lock, Cpu, Loader2, AlertCircle, ShoppingCart, Tag, CreditCard, MapPin, Phone, Mail, Globe, Clock, Landmark, Camera, Check } from 'lucide-react';
 import { useAppSettings, ThemeMode } from '../contexts/AppSettingsContext';
 import { Language } from '../i18n/translations';
 import { User, UserRole, Permission, CommercialSettings, CompanySettings } from '../types';
@@ -8,6 +7,9 @@ import { generateId } from '../utils/helpers';
 import { db } from '../services/database';
 
 type SectionType = 'company' | 'users' | 'commercial' | 'inventory' | 'pos' | 'finance' | 'notifications' | 'integrations' | 'appearance';
+
+// ✅ Azul fixo pros ícones do menu (modo claro)
+const BRAND_HEX = '#007FFF';
 
 // --- COMPONENTES AUXILIARES ---
 
@@ -809,7 +811,13 @@ const Settings: React.FC = () => {
               `}
             >
               <div className="flex items-center gap-3">
-                <span className={activeSection === item.id ? 'text-white' : 'text-brand-500'}>{item.icon}</span>
+                {/* ✅ ícones em azul no modo claro */}
+                <span
+                  className={activeSection === item.id ? 'text-white' : ''}
+                  style={activeSection === item.id ? undefined : { color: BRAND_HEX }}
+                >
+                  {item.icon}
+                </span>
                 <span className="text-xs uppercase tracking-wider">{item.label}</span>
               </div>
               {activeSection === item.id && <ChevronRight size={14} />}
