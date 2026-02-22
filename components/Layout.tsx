@@ -51,29 +51,28 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
     setIsMobileMenuOpen(false);
   };
 
-  // ✅ Brand do app (Bling-like): azul
   const BRAND_HEX = '#007FFF';
-
-  const brandBgSoft = `${BRAND_HEX}14`;
-  const brandBorderSoft = `${BRAND_HEX}2A`;
   const brandShadow = `${BRAND_HEX}33`;
+
+  // ✅ Ativo no modo claro: azulzinho discreto (Bling-like)
+  const activeBgLight = '#EAF4FF';     // azul bem claro
+  const activeBorderLight = '#CFE6FF'; // borda azul clara
 
   return (
     <div className="flex h-screen text-slate-900 dark:text-slate-100 overflow-hidden font-sans">
-      {/* Background clean (menos “barulhento”, mais Bling) */}
+      {/* Background clean */}
       <div className="fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-slate-50 dark:bg-slate-950" />
         <div
-          className="absolute -top-48 -left-48 h-[560px] w-[560px] rounded-full blur-3xl opacity-35"
+          className="absolute -top-48 -left-48 h-[560px] w-[560px] rounded-full blur-3xl opacity-30"
           style={{ background: `radial-gradient(circle, ${BRAND_HEX}22, transparent 62%)` }}
         />
         <div
-          className="absolute -bottom-56 -right-56 h-[640px] w-[640px] rounded-full blur-3xl opacity-30"
+          className="absolute -bottom-56 -right-56 h-[640px] w-[640px] rounded-full blur-3xl opacity-25"
           style={{ background: `radial-gradient(circle, ${BRAND_HEX}18, transparent 62%)` }}
         />
       </div>
 
-      {/* Overlay para Mobile Sidebar */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] md:hidden animate-in fade-in duration-200"
@@ -81,19 +80,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
         />
       )}
 
-      {/* Sidebar - Desktop & Mobile Drawer */}
       <aside
         className={`
           fixed inset-y-0 left-0 z-[70] transform transition-all duration-300 ease-in-out md:relative md:translate-x-0
           ${isMobileMenuOpen ? 'translate-x-0 w-80' : '-translate-x-full md:translate-x-0'}
-          ${isCompact ? 'md:w-[92px]' : 'md:w-[300px]'}
+          ${isCompact ? 'md:w-[92px]' : 'md:w-[304px]'}
           flex flex-col
         `}
       >
-        <div className="h-full mx-3 my-3 rounded-[22px] border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-          {/* Brand */}
+        <div className="h-full mx-3 my-3 rounded-[20px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
           <div
-            className={`h-16 flex items-center px-5 border-b border-slate-200/70 dark:border-slate-800 justify-between ${
+            className={`h-16 flex items-center px-5 border-b border-slate-200 dark:border-slate-800 justify-between ${
               isCompact ? 'md:justify-center' : ''
             }`}
           >
@@ -117,14 +114,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
 
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="md:hidden p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-colors"
             >
               <X size={18} />
             </button>
           </div>
 
-          {/* Nav */}
-          <nav className="mt-3 px-2.5 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
+          <nav className="mt-3 px-2.5 space-y-2 flex-1 overflow-y-auto custom-scrollbar">
             {visibleNavItems.map((item) => {
               const isActive = activeTab === item.key;
 
@@ -133,38 +129,42 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
                   key={item.key}
                   onClick={() => handleTabClick(item.key)}
                   className={`
-                    w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all text-sm font-semibold
-                    ${isActive ? '' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/40'}
+                    w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all text-sm font-semibold
                     ${isCompact && !isMobileMenuOpen ? 'md:justify-center' : ''}
+                    ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/40'}
                   `}
                   style={
                     isActive
                       ? {
-                          backgroundColor: brandBgSoft,
-                          border: `1px solid ${brandBorderSoft}`
+                          backgroundColor: activeBgLight,
+                          border: `1px solid ${activeBorderLight}`,
                         }
                       : undefined
                   }
                 >
-                  <div className="shrink-0">
-                    <div
-                      className={`h-10 w-10 rounded-2xl flex items-center justify-center border transition-colors ${
-                        isActive
-                          ? 'bg-white dark:bg-slate-950 border-slate-200/70 dark:border-slate-800'
-                          : 'border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900'
-                      }`}
-                      style={isActive ? { boxShadow: `0 14px 40px -24px ${brandShadow}` } : undefined}
-                    >
-                      <div style={isActive ? { color: BRAND_HEX } : undefined}>{item.icon}</div>
-                    </div>
+                  <div
+                    className={`
+                      h-10 w-10 rounded-2xl flex items-center justify-center border transition-all
+                      ${isActive ? 'bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800'}
+                    `}
+                    style={isActive ? { boxShadow: `0 16px 42px -28px ${brandShadow}` } : undefined}
+                  >
+                    <div style={isActive ? { color: BRAND_HEX } : undefined}>{item.icon}</div>
                   </div>
 
                   {(!isCompact || isMobileMenuOpen) && (
-                    <div className="flex-1 flex items-center justify-between">
-                      <span className="truncate" style={isActive ? { color: BRAND_HEX } : undefined}>
-                        {t(item.key as any)}
-                      </span>
-                      {isActive && <span className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND_HEX }} />}
+                    <div className="flex-1 flex items-center justify-between min-w-0">
+                      <span className="truncate">{t(item.key as any)}</span>
+
+                      {/* ✅ pill discreta */}
+                      {isActive && (
+                        <span
+                          className="ml-3 px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-white border border-slate-200"
+                          style={{ color: BRAND_HEX }}
+                        >
+                          Ativo
+                        </span>
+                      )}
                     </div>
                   )}
                 </button>
@@ -172,12 +172,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
             })}
           </nav>
 
-          {/* Logout */}
-          <div className="p-3 border-t border-slate-200/70 dark:border-slate-800">
+          <div className="p-3 border-t border-slate-200 dark:border-slate-800">
             <button
               onClick={onLogout}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold transition-colors
-                text-rose-600 dark:text-rose-400 hover:bg-rose-50/70 dark:hover:bg-rose-500/10
+                text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10
                 ${isCompact && !isMobileMenuOpen ? 'md:justify-center' : ''}
               `}
             >
@@ -188,11 +187,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
         </div>
       </aside>
 
-      {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
-        {/* Topbar */}
         <header className="h-14 md:h-16 px-4 md:px-6 z-30">
-          <div className="h-full mt-3 rounded-[20px] border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between px-3 md:px-4">
+          <div className="h-full mt-3 rounded-[20px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between px-3 md:px-4">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
@@ -201,7 +198,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
                 <Menu size={20} />
               </button>
 
-              <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-950 w-[360px]">
+              <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 w-[360px]">
                 <Search size={16} className="text-slate-400" />
                 <input
                   type="text"
@@ -210,13 +207,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
                 />
               </div>
 
-              <h1 className="md:hidden text-sm font-black text-slate-900 dark:text-white tracking-tight">
-                Nexero
-              </h1>
+              <h1 className="md:hidden text-sm font-black text-slate-900 dark:text-white tracking-tight">Nexero</h1>
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Online indicator */}
               <div className="flex items-center">
                 {isOnline ? (
                   <span className="text-emerald-600 bg-emerald-50/80 dark:bg-emerald-500/10 p-2 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
@@ -229,15 +223,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
                 )}
               </div>
 
-              {/* Notifications */}
               <button className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl relative transition-colors">
                 <Bell size={18} />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>
               </button>
 
-              <div className="h-6 w-px bg-slate-200/70 dark:bg-slate-800 mx-1"></div>
+              <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
 
-              {/* Profile */}
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center gap-2 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
@@ -256,14 +248,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
-          {children}
-        </main>
+        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6">{children}</main>
       </div>
 
-      {/* Bottom Navigation - Mobile */}
       <div className="fixed bottom-0 left-0 right-0 h-16 z-[60] md:hidden">
-        <div className="mx-3 mb-3 rounded-[20px] border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm h-full flex items-center justify-around px-2">
+        <div className="mx-3 mb-3 rounded-[20px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm h-full flex items-center justify-around px-2">
           {bottomNavItems.map((item) => {
             const isActive = activeTab === item.key;
             return (
@@ -276,9 +265,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
               >
                 <div
                   className={`h-10 w-10 rounded-2xl flex items-center justify-center border transition-all ${
-                    isActive ? 'bg-white dark:bg-slate-950 border-slate-200/80 dark:border-slate-800' : 'bg-transparent border-transparent'
+                    isActive ? 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800' : 'bg-transparent border-transparent'
                   }`}
-                  style={isActive ? { boxShadow: `0 14px 40px -24px ${brandShadow}` } : undefined}
+                  style={isActive ? { boxShadow: `0 16px 42px -28px ${brandShadow}` } : undefined}
                 >
                   <div style={isActive ? { color: BRAND_HEX } : undefined}>{item.icon}</div>
                 </div>
@@ -294,12 +283,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isOn
 
       {isProfileOpen && (
         <div className="fixed inset-0 z-[100]" onClick={() => setIsProfileOpen(false)}>
-          <div className="absolute top-16 right-4 w-56 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2">
-            <div className="px-4 py-3 border-b border-slate-200/70 dark:border-slate-800">
+          <div className="absolute top-16 right-4 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
               <p className="text-sm font-black text-slate-900 dark:text-white truncate">{user?.name}</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
-                {user?.role}
-              </p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">{user?.role}</p>
             </div>
 
             <button className="w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
