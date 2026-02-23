@@ -1108,30 +1108,51 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
-        <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">{editingClient ? 'Editar Cliente' : 'Novo Cadastro de Cliente'}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+    // ✅ FIX MOBILE: modal vira "sheet" (full screen no mobile), com scroll correto e safe-area
+    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+
+      <div className="relative bg-white dark:bg-slate-900 w-full sm:max-w-xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800 max-h-[92vh] sm:max-h-[85vh] rounded-t-3xl sm:rounded-2xl flex flex-col">
+        {/* Header fixo */}
+        <div className="px-6 py-4 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50/70 dark:bg-slate-800/20 sticky top-0 z-10">
+          <h3 className="text-base sm:text-lg font-black text-slate-800 dark:text-white tracking-tight">
+            {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+          </h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
             <X size={18} />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        {/* Conteúdo com scroll (sem “duplo scroll”) */}
+        <div className="px-6 py-5 space-y-5 overflow-y-auto">
           {error && (
-            <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-3 rounded-lg flex items-center gap-3 text-rose-600 text-xs font-bold animate-in shake duration-300">
+            <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-3 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in shake duration-300">
               <AlertCircle size={16} /> {error}
             </div>
           )}
 
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
-            <button onClick={() => setDocType('PJ')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
-              Pessoa Jurídica
-            </button>
-            <button onClick={() => setDocType('PF')} className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest ${docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'}`} type="button">
-              Pessoa Física
-            </button>
+          {/* Toggle PJ/PF responsivo (sem ficar espremido) */}
+          <div className="w-full">
+            <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
+              <button
+                onClick={() => setDocType('PJ')}
+                className={`py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest ${
+                  docType === 'PJ' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'
+                }`}
+                type="button"
+              >
+                Pessoa Jurídica
+              </button>
+              <button
+                onClick={() => setDocType('PF')}
+                className={`py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest ${
+                  docType === 'PF' ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-sm' : 'text-slate-500'
+                }`}
+                type="button"
+              >
+                Pessoa Física
+              </button>
+            </div>
           </div>
 
           {/* ✅ Categoria */}
@@ -1162,18 +1183,33 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
             <p className="text-[11px] text-slate-500 dark:text-slate-400">Clique de novo para remover.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5 md:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5 sm:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType === 'PJ' ? 'Razão Social' : 'Nome Completo'}</label>
-              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-500/10 text-sm font-semibold transition-all"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{docType}</label>
               <div className="relative">
-                <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/10 text-sm font-medium transition-all" value={formData.cnpj_cpf} onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })} />
+                <input
+                  type="text"
+                  className="w-full pr-24 px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-500/10 text-sm font-semibold transition-all"
+                  value={formData.cnpj_cpf}
+                  onChange={(e) => setFormData({ ...formData, cnpj_cpf: e.target.value })}
+                />
                 {docType === 'PJ' && formData.cnpj_cpf.replace(/\D/g, '').length === 14 && (
-                  <button onClick={handleLookup} disabled={isSearching} className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold bg-brand-600 text-white px-2 py-1 rounded hover:bg-brand-700" type="button">
+                  <button
+                    onClick={handleLookup}
+                    disabled={isSearching}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-black bg-brand-600 text-white px-3 py-2 rounded-xl hover:bg-brand-700 disabled:opacity-60"
+                    type="button"
+                  >
                     {isSearching ? '...' : 'BUSCAR'}
                   </button>
                 )}
@@ -1182,33 +1218,66 @@ const ClientModal: React.FC<{ companyId: string; onClose: () => void; onRefresh:
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
-              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-500/10"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
             </div>
 
-            <div className="space-y-1.5 md:col-span-2">
+            <div className="space-y-1.5 sm:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
-              <input type="email" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+              <input
+                type="email"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-500/10"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
             </div>
 
-            <div className="space-y-1.5 md:col-span-2">
+            <div className="space-y-1.5 sm:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Endereço Completo</label>
-              <input type="text" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-500/10"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              />
             </div>
 
-            <div className="space-y-1.5 md:col-span-2">
+            <div className="space-y-1.5 sm:col-span-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Crédito</label>
-              <input type="number" className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/10" value={formData.credit_limit} onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })} />
+              <input
+                type="number"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-500/10"
+                value={formData.credit_limit}
+                onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
+              />
             </div>
           </div>
         </div>
 
-        <div className="p-6 border-t dark:border-slate-800 flex gap-3 bg-slate-50/50 dark:bg-slate-800/20">
-          <button onClick={onClose} className="flex-1 py-3 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-widest" type="button">
+        {/* Footer fixo + safe-area (sem ficar atrás da barra do celular) */}
+        <div
+          className="px-6 py-4 border-t dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/30 backdrop-blur sticky bottom-0 z-10 flex gap-3"
+          style={{ paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800"
+            type="button"
+          >
             Descartar
           </button>
-          <button onClick={handleSave} disabled={isSaving} className="flex-2 w-2/3 py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50" type="button">
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex-[1.6] py-3 bg-brand-600 text-white font-black rounded-2xl hover:bg-brand-700 shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-50"
+            type="button"
+          >
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-            {isSaving ? 'Processando...' : 'Salvar Cliente'}
+            {isSaving ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
       </div>

@@ -40,6 +40,8 @@ type PurchaseItemDraft = {
   unit_cost: string;
 };
 
+const BRAND = '#007FFF';
+
 const Inventory: React.FC = () => {
   const { companyId } = useAuth();
 
@@ -445,17 +447,18 @@ const Inventory: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+        <div className="min-w-0">
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Controle de Estoque</h2>
           <p className="text-slate-500 dark:text-slate-400">Operação de estoque com auditoria de entradas e saídas.</p>
         </div>
 
-        <div className="flex gap-2">
+        {/* ✅ Mobile: grid 2 colunas, sem overflow; Desktop: linha */}
+        <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
           <button
             onClick={openPurchaseModal}
             disabled={loading || products.length === 0}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-indigo-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             title="Entrada por Nota/Compra (lote)"
           >
             <FileText size={18} /> Entrada por Nota
@@ -464,15 +467,16 @@ const Inventory: React.FC = () => {
           <button
             onClick={() => openStockModal('IN')}
             disabled={loading || products.length === 0}
-            className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <ArrowUpRight size={18} /> Entrada
           </button>
 
+          {/* ✅ força a "Saída" a aparecer no mobile (segunda linha do grid) */}
           <button
             onClick={() => openStockModal('OUT')}
             disabled={loading || products.length === 0}
-            className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="col-span-2 sm:col-auto w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <ArrowDownLeft size={18} /> Saída
           </button>
@@ -500,11 +504,11 @@ const Inventory: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
         <div className="p-4 border-b dark:border-slate-800 flex items-center gap-4 bg-slate-50/50 dark:bg-slate-800/20">
           <div className="relative flex-1 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-600 transition-colors" size={18} />
             <input
               type="text"
               placeholder="Buscar produto por nome ou SKU..."
-              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -514,7 +518,7 @@ const Inventory: React.FC = () => {
         <div className="overflow-x-auto">
           {loading ? (
             <div className="p-20 text-center">
-              <Loader2 className="animate-spin inline-block text-indigo-600" size={32} />
+              <Loader2 className="animate-spin inline-block text-brand-600" size={32} />
               <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Sincronizando inventário...</p>
             </div>
           ) : (
@@ -606,7 +610,7 @@ const Inventory: React.FC = () => {
         <div className="p-5">
           {movementsLoading ? (
             <div className="py-10 text-center">
-              <Loader2 className="animate-spin inline-block text-indigo-600" size={28} />
+              <Loader2 className="animate-spin inline-block text-brand-600" size={28} />
               <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Carregando movimentações...</p>
             </div>
           ) : movements.length === 0 ? (
@@ -732,7 +736,7 @@ const Inventory: React.FC = () => {
                   <select
                     value={selectedProductId}
                     onChange={(e) => setSelectedProductId(e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                   >
                     {products.map((p) => (
                       <option key={p.id} value={String(p.id)}>
@@ -751,7 +755,7 @@ const Inventory: React.FC = () => {
                       step={1}
                       value={qty}
                       onChange={(e) => setQty(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                       placeholder="Ex: 10"
                     />
                   </div>
@@ -762,7 +766,7 @@ const Inventory: React.FC = () => {
                       type="text"
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                       placeholder="Ex: reposição / perda / ajuste"
                     />
                   </div>
@@ -801,7 +805,7 @@ const Inventory: React.FC = () => {
             <div className="w-full max-w-3xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl">
               <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-200">
                     <FileText size={18} />
                   </div>
                   <div>
@@ -853,7 +857,6 @@ const Inventory: React.FC = () => {
                         onChange={(e) => {
                           const f = e.target.files?.[0] || null;
                           setPurchaseFile(f);
-                          // reset para permitir escolher o mesmo arquivo de novo
                           e.currentTarget.value = '';
                         }}
                       />
@@ -890,7 +893,7 @@ const Inventory: React.FC = () => {
                     <select
                       value={docType}
                       onChange={(e) => setDocType(e.target.value as any)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                     >
                       <option value="NF">NF</option>
                       <option value="PEDIDO">Pedido</option>
@@ -903,7 +906,7 @@ const Inventory: React.FC = () => {
                     <input
                       value={docNumber}
                       onChange={(e) => setDocNumber(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                       placeholder="Ex: 12345"
                     />
                   </div>
@@ -913,7 +916,7 @@ const Inventory: React.FC = () => {
                     <input
                       value={supplierName}
                       onChange={(e) => setSupplierName(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                       placeholder="Ex: Distribuidora X"
                     />
                   </div>
@@ -924,7 +927,7 @@ const Inventory: React.FC = () => {
                       type="date"
                       value={issuedAt}
                       onChange={(e) => setIssuedAt(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                     />
                   </div>
 
@@ -933,7 +936,7 @@ const Inventory: React.FC = () => {
                     <input
                       value={purchaseNotes}
                       onChange={(e) => setPurchaseNotes(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                       placeholder="Ex: compra do mês / reposição"
                     />
                   </div>
@@ -959,7 +962,7 @@ const Inventory: React.FC = () => {
                           <select
                             value={it.product_id}
                             onChange={(e) => updatePurchaseItem(idx, { product_id: e.target.value })}
-                            className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                           >
                             <option value="">Selecione...</option>
                             {products.map((p) => (
@@ -978,7 +981,7 @@ const Inventory: React.FC = () => {
                             step={1}
                             value={it.quantity}
                             onChange={(e) => updatePurchaseItem(idx, { quantity: e.target.value })}
-                            className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                           />
                         </div>
 
@@ -990,7 +993,7 @@ const Inventory: React.FC = () => {
                             step={0.01}
                             value={it.unit_cost}
                             onChange={(e) => updatePurchaseItem(idx, { unit_cost: e.target.value })}
-                            className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
                           />
                         </div>
 
@@ -1042,7 +1045,7 @@ const Inventory: React.FC = () => {
                 <button
                   onClick={submitPurchaseReceipt}
                   disabled={purchaseSaving}
-                  className="px-4 py-2 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-all disabled:opacity-60 flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl font-semibold text-white bg-brand-600 hover:opacity-90 transition-all disabled:opacity-60 flex items-center gap-2"
                 >
                   {purchaseSaving && <Loader2 className="animate-spin" size={16} />}
                   Confirmar Entrada
@@ -1052,6 +1055,11 @@ const Inventory: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* tiny css (só pra garantir que nenhum container crie scroll lateral no mobile) */}
+      <style>{`
+        html, body { overflow-x: hidden; }
+      `}</style>
     </div>
   );
 };
