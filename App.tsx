@@ -53,6 +53,11 @@ const BrandOverrides: React.FC = () => {
     /* Alguns padrões de foco */
     .focus\\:ring-brand-600:focus{ --tw-ring-color:${BRAND} !important; }
     .focus\\:border-brand-600:focus{ border-color:${BRAND} !important; }
+
+    /* ✅ Mobile: garante que o viewport use altura "real" e evita cortes/overlap com barra inferior */
+    html, body, #root {
+      height: 100%;
+    }
   `;
   return <style>{css}</style>;
 };
@@ -180,7 +185,11 @@ const AppContent: React.FC = () => {
           <span className="text-[10px] font-black uppercase tracking-widest">Cloud Sync...</span>
         </div>
       )}
-      <div className="pb-10 md:pb-0 h-full">{renderContent()}</div>
+
+      {/* ✅ FIX MOBILE: espaço correto para a bottom-bar do Layout + safe-area (iPhone) */}
+      <div className="h-full pb-[96px] md:pb-0" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>
+        {renderContent()}
+      </div>
     </Layout>
   );
 };
