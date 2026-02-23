@@ -23,6 +23,9 @@ type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'WAITING_CONFIRMATION';
 
 const BRAND_HEX = '#007FFF';
 
+// ✅ 2 imagens (apenas) para rodar no banner da esquerda (vindo direto de /public)
+const HERO_SLIDES = ['/slide1.png', '/slide2.png'];
+
 const Login: React.FC = () => {
   const { login, signUp, resendConfirmation, resetPassword, isAuthenticated, refreshMembership } = useAuth();
 
@@ -48,6 +51,18 @@ const Login: React.FC = () => {
     password: '',
     confirmPassword: ''
   });
+
+  // ✅ controle do slide (2 imagens)
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+
+  // ✅ autoplay simples (troca a cada 4s)
+  useEffect(() => {
+    if (HERO_SLIDES.length < 2) return;
+    const id = window.setInterval(() => {
+      setHeroSlideIndex((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -238,31 +253,40 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex bg-white dark:bg-slate-950 transition-colors duration-300">
       {/* Sidebar Desktop */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-600/20 via-slate-900 to-slate-900 z-0" />
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white">
+        {/* ✅ SLIDER (2 imagens) */}
+        <div className="absolute inset-0 z-0 bg-white">
+          {HERO_SLIDES.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              // ✅ mantém a imagem inteira (sem cortar) e sem “fundão escuro”
+              className={`absolute inset-0 w-full h-full object-contain object-center transition-opacity duration-1000 ${
+                i === heroSlideIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+              // ✅ remove aquele sombreado pesado: fundo branco limpo
+              style={{ background: '#ffffff' }}
+            />
+          ))}
+        </div>
+
+        {/* ✅ overlay MUITO leve só pra dar contraste na logo (sem “cinza” pesado) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/0 via-white/0 to-white/0 z-0" />
+
         <div className="relative z-10 flex flex-col justify-between p-20 w-full text-white">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-brand-600/30">
-              <Zap size={28} className="text-white fill-current" />
+          {/* ✅ Só a LOGO, mais pra cima e com “chip” suave para ler em qualquer imagem */}
+          <div className="flex items-center gap-4 mt-[-34px]">
+            <div className="flex items-center gap-4 bg-white/70 backdrop-blur-md rounded-3xl px-5 py-3 shadow-lg shadow-black/5">
+              <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-brand-600/30">
+                <Zap size={28} className="text-white fill-current" />
+              </div>
+              <h1 className="text-4xl font-black tracking-tighter uppercase text-slate-900">NEXERO</h1>
             </div>
-            <h1 className="text-4xl font-black tracking-tighter uppercase">NEXERO</h1>
           </div>
 
-          <div className="space-y-10">
-            <h2 className="text-7xl font-black leading-[0.9] tracking-tighter">
-              Gestão <br />
-              {/* ✅ aqui estava puxando pro teal: agora é azul fixo */}
-              <span style={{ color: BRAND_HEX }}>Inteligente.</span>
-            </h2>
-
-            {/* ✅ barra lateral também azul fixo */}
-            <p
-              className="text-xl text-slate-400 font-medium max-w-md leading-relaxed italic pl-6"
-              style={{ borderLeft: `4px solid ${BRAND_HEX}` }}
-            >
-              A evolução do seu negócio começa com dados precisos.
-            </p>
-          </div>
+          {/* ✅ removido: título e textos */}
+          <div />
         </div>
       </div>
 
