@@ -23,9 +23,6 @@ type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'WAITING_CONFIRMATION';
 
 const BRAND_HEX = '#007FFF';
 
-// ✅ 2 imagens (apenas) para rodar no banner da esquerda (vindo direto de /public)
-const HERO_SLIDES = ['/slide1.png', '/slide2.png'];
-
 const Login: React.FC = () => {
   const { login, signUp, resendConfirmation, resetPassword, isAuthenticated, refreshMembership } = useAuth();
 
@@ -52,16 +49,19 @@ const Login: React.FC = () => {
     confirmPassword: ''
   });
 
-  // ✅ controle do slide (2 imagens)
-  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  // ✅ Slides (caminho certo p/ produção + Vite)
+  const SLIDES = [
+    `${import.meta.env.BASE_URL}login/slide1.png`,
+    `${import.meta.env.BASE_URL}login/slide2.png`
+  ];
+  const [slideIdx, setSlideIdx] = useState(0);
 
-  // ✅ autoplay simples (troca a cada 4s)
   useEffect(() => {
-    if (HERO_SLIDES.length < 2) return;
-    const id = window.setInterval(() => {
-      setHeroSlideIndex((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 4000);
-    return () => window.clearInterval(id);
+    const t = window.setInterval(() => {
+      setSlideIdx((prev) => (prev + 1) % SLIDES.length);
+    }, 4500);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -252,41 +252,33 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex bg-white dark:bg-slate-950 transition-colors duration-300">
-      {/* Sidebar Desktop */}
+      {/* ✅ Sidebar Desktop com slider (fundo branco, sem textos na frente) */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white">
-        {/* ✅ SLIDER (2 imagens) */}
-        <div className="absolute inset-0 z-0 bg-white">
-          {HERO_SLIDES.map((src, i) => (
+        {/* imagens */}
+        <div className="absolute inset-0">
+          {SLIDES.map((src, idx) => (
             <img
               key={src}
               src={src}
-              alt=""
-              // ✅ mantém a imagem inteira (sem cortar) e sem “fundão escuro”
-              className={`absolute inset-0 w-full h-full object-contain object-center transition-opacity duration-1000 ${
-                i === heroSlideIndex ? 'opacity-100' : 'opacity-0'
+              alt={`Slide ${idx + 1}`}
+              className={`absolute inset-0 w-full h-full object-contain p-10 transition-opacity duration-700 ${
+                idx === slideIdx ? 'opacity-100' : 'opacity-0'
               }`}
-              // ✅ remove aquele sombreado pesado: fundo branco limpo
-              style={{ background: '#ffffff' }}
+              draggable={false}
             />
           ))}
+          {/* leve “véu” branco pra ficar clean */}
+          <div className="absolute inset-0 bg-white/35" />
         </div>
 
-        {/* ✅ overlay MUITO leve só pra dar contraste na logo (sem “cinza” pesado) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/0 via-white/0 to-white/0 z-0" />
-
-        <div className="relative z-10 flex flex-col justify-between p-20 w-full text-white">
-          {/* ✅ Só a LOGO, mais pra cima e com “chip” suave para ler em qualquer imagem */}
-          <div className="flex items-center gap-4 mt-[-34px]">
-            <div className="flex items-center gap-4 bg-white/70 backdrop-blur-md rounded-3xl px-5 py-3 shadow-lg shadow-black/5">
-              <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-brand-600/30">
-                <Zap size={28} className="text-white fill-current" />
-              </div>
-              <h1 className="text-4xl font-black tracking-tighter uppercase text-slate-900">NEXERO</h1>
+        {/* topo: só a logo e mais alta */}
+        <div className="relative z-10 w-full p-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-600/20">
+              <Zap size={28} className="text-white fill-current" />
             </div>
+            <h1 className="text-4xl font-black tracking-tighter uppercase text-slate-900">NEXERO</h1>
           </div>
-
-          {/* ✅ removido: título e textos */}
-          <div />
         </div>
       </div>
 
