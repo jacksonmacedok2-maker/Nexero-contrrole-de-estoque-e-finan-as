@@ -24,8 +24,6 @@ import { Loader2, ShieldCheck, Cloud } from 'lucide-react';
 const BRAND = '#007FFF';
 
 const BrandOverrides: React.FC = () => {
-  // Força azul mesmo sem tailwind.config / sem css global
-  // (usa variables + overrides de classes mais usadas)
   const css = `
     :root{
       --brand: ${BRAND};
@@ -41,20 +39,42 @@ const BrandOverrides: React.FC = () => {
       --brand-900: ${BRAND};
     }
 
-    /* Overrides de utilitários "brand" comuns (com !important) */
+    /* Utilitários Brand */
     .bg-brand-600{ background-color:${BRAND} !important; }
     .text-brand-600{ color:${BRAND} !important; }
     .border-brand-600{ border-color:${BRAND} !important; }
     .ring-brand-600{ --tw-ring-color:${BRAND} !important; }
-    .shadow-brand-600\\/30{ box-shadow: 0 18px 40px -22px ${BRAND}4d !important; }
-    .shadow-brand-600\\/25{ box-shadow: 0 18px 40px -22px ${BRAND}40 !important; }
-    .shadow-brand-600\\/20{ box-shadow: 0 18px 40px -22px ${BRAND}33 !important; }
 
-    /* Alguns padrões de foco */
-    .focus\\:ring-brand-600:focus{ --tw-ring-color:${BRAND} !important; }
-    .focus\\:border-brand-600:focus{ border-color:${BRAND} !important; }
+    /* ✅ FIX DE VISIBILIDADE: Menu Ativo */
+    .sidebar-active { 
+      background-color: #ffffff !important; 
+    }
+    .sidebar-active, .sidebar-active *, .sidebar-active span, .sidebar-active svg { 
+      color: #0f172a !important; 
+    }
 
-    /* ✅ Mobile: garante que o viewport use altura "real" e evita cortes/overlap com barra inferior */
+    /* ✨ NOVOS EFEITOS DE GLOW ✨ */
+    .glow-primary {
+      box-shadow: 0 0 40px rgba(34, 211, 238, 0.15),
+                  0 0 80px rgba(34, 211, 238, 0.05);
+    }
+
+    .glow-hover:hover {
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.2),
+                  0 4px 16px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .ambient-glow {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.08) 0%, transparent 70%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
     html, body, #root {
       height: 100%;
     }
@@ -94,14 +114,9 @@ const AppContent: React.FC = () => {
       setIsSyncing(false);
     };
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    if (navigator.onLine) {
-      db.syncPendingData();
-    }
-
+    if (navigator.onLine) db.syncPendingData();
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -118,13 +133,11 @@ const AppContent: React.FC = () => {
     if (queryParams.has('code') || hashParams.has('access_token')) return <AuthCallback setActiveTab={() => navigateTo('dashboard')} />;
     if (path.includes('/auth/confirmed')) return <AuthConfirmed setActiveTab={() => navigateTo('dashboard')} />;
 
-    if (!isAuthenticated) {
-      return <Login />;
-    }
+    if (!isAuthenticated) return <Login />;
 
     if (loadingCompany && !companyId) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
           <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 bg-brand-600/10 rounded-2xl flex items-center justify-center text-brand-600 animate-bounce">
               <Cloud size={24} />
@@ -137,33 +150,20 @@ const AppContent: React.FC = () => {
       );
     }
 
-    if (!companyId) {
-      return <CreateCompanyModal onSuccess={() => {}} />;
-    }
+    if (!companyId) return <CreateCompanyModal onSuccess={() => {}} />;
 
     switch (activeKey) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'orders':
-        return hasPermission('ORDERS') ? <Orders /> : <AccessDenied />;
-      case 'clients':
-        return hasPermission('CLIENTS') ? <Clients /> : <AccessDenied />;
-      case 'pos':
-        return hasPermission('POS') ? <POS /> : <AccessDenied />;
-      case 'team':
-        return hasPermission('TEAM') ? <Team /> : <AccessDenied />;
-      case 'products':
-        return hasPermission('PRODUCTS') ? <Products /> : <AccessDenied />;
-      case 'inventory':
-        return hasPermission('INVENTORY') ? <Inventory /> : <AccessDenied />;
-      case 'finance':
-        return hasPermission('FINANCE') ? <Finance /> : <AccessDenied />;
-      case 'reports':
-        return hasPermission('REPORTS') ? <Reports /> : <AccessDenied />;
-      case 'settings':
-        return hasPermission('SETTINGS') ? <Settings /> : <AccessDenied />;
-      default:
-        return <Dashboard />;
+      case 'dashboard': return <Dashboard />;
+      case 'orders': return hasPermission('ORDERS') ? <Orders /> : <AccessDenied />;
+      case 'clients': return hasPermission('CLIENTS') ? <Clients /> : <AccessDenied />;
+      case 'pos': return hasPermission('POS') ? <POS /> : <AccessDenied />;
+      case 'team': return hasPermission('TEAM') ? <Team /> : <AccessDenied />;
+      case 'products': return hasPermission('PRODUCTS') ? <Products /> : <AccessDenied />;
+      case 'inventory': return hasPermission('INVENTORY') ? <Inventory /> : <AccessDenied />;
+      case 'finance': return hasPermission('FINANCE') ? <Finance /> : <AccessDenied />;
+      case 'reports': return hasPermission('REPORTS') ? <Reports /> : <AccessDenied />;
+      case 'settings': return hasPermission('SETTINGS') ? <Settings /> : <AccessDenied />;
+      default: return <Dashboard />;
     }
   };
 
@@ -179,15 +179,17 @@ const AppContent: React.FC = () => {
 
   return (
     <Layout activeTab={activeKey} setActiveTab={navigateTo} isOnline={isOnline} onLogout={logout}>
+      {/* Exemplo de uso do Ambient Glow no fundo */}
+      <div className="ambient-glow top-0 left-0" />
+      
       {isSyncing && (
-        <div className="fixed bottom-20 right-4 z-[100] bg-brand-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+        <div className="fixed bottom-20 right-4 z-[100] bg-brand-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce glow-primary">
           <Loader2 className="animate-spin" size={18} />
           <span className="text-[10px] font-black uppercase tracking-widest">Cloud Sync...</span>
         </div>
       )}
 
-      {/* ✅ FIX MOBILE: espaço correto para a bottom-bar do Layout + safe-area (iPhone) */}
-      <div className="h-full pb-[96px] md:pb-0" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="relative z-10 h-full pb-[96px] md:pb-0" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>
         {renderContent()}
       </div>
     </Layout>
