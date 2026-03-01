@@ -21,22 +21,22 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { db } from './services/database';
 import { Loader2, ShieldCheck, Cloud } from 'lucide-react';
 
-const BRAND = '#007FFF';
+const BRAND = '#2563eb';
 
 const BrandOverrides: React.FC = () => {
   const css = `
     :root{
       --brand: ${BRAND};
-      --brand-50: ${BRAND}14;
-      --brand-100: ${BRAND}1f;
-      --brand-200: ${BRAND}2a;
-      --brand-300: ${BRAND}3d;
-      --brand-400: ${BRAND}66;
-      --brand-500: ${BRAND}b3;
-      --brand-600: ${BRAND};
-      --brand-700: ${BRAND};
-      --brand-800: ${BRAND};
-      --brand-900: ${BRAND};
+      --brand-50: #eff6ff;
+      --brand-100: #dbeafe;
+      --brand-200: #bfdbfe;
+      --brand-300: #93c5fd;
+      --brand-400: #60a5fa;
+      --brand-500: #3b82f6;
+      --brand-600: #2563eb;
+      --brand-700: #1d4ed8;
+      --brand-800: #1e40af;
+      --brand-900: #1e3a8a;
     }
 
     .bg-brand-600{ background-color:${BRAND} !important; }
@@ -47,23 +47,14 @@ const BrandOverrides: React.FC = () => {
     .shadow-brand-600\\/25{ box-shadow: 0 18px 40px -22px ${BRAND}40 !important; }
     .shadow-brand-600\\/20{ box-shadow: 0 18px 40px -22px ${BRAND}33 !important; }
 
-    /* ✅ FIX DE VISIBILIDADE: Força o texto e ícones a ficarem escuros no item ativo */
-    .sidebar-active { 
-      background-color: #ffffff !important; 
-    }
-    
-    .sidebar-active, 
-    .sidebar-active *, 
-    .sidebar-active span, 
-    .sidebar-active svg { 
-      color: #0f172a !important; 
-    }
-
     .focus\\:ring-brand-600:focus{ --tw-ring-color:${BRAND} !important; }
     .focus\\:border-brand-600:focus{ border-color:${BRAND} !important; }
 
     html, body, #root {
       height: 100%;
+      background-color: #f8fafc;
+      color: #1e293b;
+      font-family: 'Inter', sans-serif;
     }
   `;
   return <style>{css}</style>;

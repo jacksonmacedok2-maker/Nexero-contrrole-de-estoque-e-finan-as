@@ -40,7 +40,7 @@ type PurchaseItemDraft = {
   unit_cost: string;
 };
 
-const BRAND = '#007FFF';
+const BRAND = '#2563eb';
 
 const Inventory: React.FC = () => {
   const { companyId } = useAuth();
@@ -449,8 +449,8 @@ const Inventory: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
         <div className="min-w-0">
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Controle de Estoque</h2>
-          <p className="text-slate-500 dark:text-slate-400">Operação de estoque com auditoria de entradas e saídas.</p>
+          <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase">Controle de Estoque</h2>
+          <p className="text-slate-500 italic text-sm">Operação de estoque com auditoria de entradas e saídas Nexero.</p>
         </div>
 
         {/* ✅ Mobile: grid 2 colunas, sem overflow; Desktop: linha */}
@@ -458,57 +458,57 @@ const Inventory: React.FC = () => {
           <button
             onClick={openPurchaseModal}
             disabled={loading || products.length === 0}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-brand-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-brand-600/20"
             title="Entrada por Nota/Compra (lote)"
           >
-            <FileText size={18} /> Entrada por Nota
+            <FileText size={16} strokeWidth={3} /> Entrada por Nota
           </button>
 
           <button
             onClick={() => openStockModal('IN')}
             disabled={loading || products.length === 0}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <ArrowUpRight size={18} /> Entrada
+            <ArrowUpRight size={16} strokeWidth={3} /> Entrada
           </button>
 
           {/* ✅ força a "Saída" a aparecer no mobile (segunda linha do grid) */}
           <button
             onClick={() => openStockModal('OUT')}
             disabled={loading || products.length === 0}
-            className="col-span-2 sm:col-auto w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="col-span-2 sm:col-auto w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <ArrowDownLeft size={18} /> Saída
+            <ArrowDownLeft size={16} strokeWidth={3} /> Saída
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-          <p className="text-sm font-medium text-slate-500">Valor Total em Estoque</p>
-          <p className="text-2xl font-bold text-slate-800 dark:text-white mt-1">{formatCurrency(totalValue)}</p>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all hover:shadow-lg dark:bg-slate-900 dark:border-slate-800">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor Total em Estoque</p>
+          <p className="text-2xl font-black tracking-tighter text-slate-900 mt-1 dark:text-white">{formatCurrency(totalValue)}</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-          <p className="text-sm font-medium text-slate-500">Itens Abaixo do Mínimo</p>
-          <div className="flex items-center gap-2 text-amber-600 mt-1">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all hover:shadow-lg dark:bg-slate-900 dark:border-slate-800">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Itens Abaixo do Mínimo</p>
+          <div className="flex items-center gap-2 text-rose-600 mt-1">
             <AlertTriangle size={20} />
-            <p className="text-2xl font-bold">{itemsBelowMin} itens</p>
+            <p className="text-2xl font-black tracking-tighter">{itemsBelowMin} itens</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-          <p className="text-sm font-medium text-slate-500">Total de SKUs</p>
-          <p className="text-2xl font-bold text-slate-800 dark:text-white mt-1">{products.length} produtos</p>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all hover:shadow-lg dark:bg-slate-900 dark:border-slate-800">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total de SKUs</p>
+          <p className="text-2xl font-black tracking-tighter text-slate-900 mt-1 dark:text-white">{products.length} produtos</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-        <div className="p-4 border-b dark:border-slate-800 flex items-center gap-4 bg-slate-50/50 dark:bg-slate-800/20">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+        <div className="p-4 border-b border-slate-100 flex items-center gap-4 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/20">
           <div className="relative flex-1 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-600 transition-colors" size={18} />
             <input
               type="text"
               placeholder="Buscar produto por nome ou SKU..."
-              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all"
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -519,12 +519,12 @@ const Inventory: React.FC = () => {
           {loading ? (
             <div className="p-20 text-center">
               <Loader2 className="animate-spin inline-block text-brand-600" size={32} />
-              <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Sincronizando inventário...</p>
+              <p className="text-xs font-black text-slate-400 mt-2 uppercase tracking-widest">Sincronizando inventário...</p>
             </div>
           ) : (
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-slate-50/80 dark:bg-slate-800/50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b dark:border-slate-800">
+                <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100 dark:bg-slate-800/50 dark:text-slate-500 dark:border-slate-800">
                   <th className="px-6 py-4">Produto</th>
                   <th className="px-6 py-4">SKU</th>
                   <th className="px-6 py-4 text-center">Estoque</th>
@@ -534,7 +534,7 @@ const Inventory: React.FC = () => {
                   <th className="px-6 py-4 text-center">Última mov.</th>
                 </tr>
               </thead>
-              <tbody className="divide-y dark:divide-slate-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredProducts.map((item) => {
                   const min = Number(item.min_stock || 0);
                   const stock = Number(item.stock || 0);
@@ -543,33 +543,33 @@ const Inventory: React.FC = () => {
                   const lastMove = movementsByProductId.get(String(item.id));
 
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                      <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-100">{item.name}</td>
-                      <td className="px-6 py-4 text-sm text-slate-500 uppercase">{item.sku || 'N/A'}</td>
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors group dark:hover:bg-slate-800/50">
+                      <td className="px-6 py-4 font-bold text-slate-700 group-hover:text-brand-600 transition-colors dark:text-slate-300 dark:group-hover:text-brand-400">{item.name}</td>
+                      <td className="px-6 py-4 text-xs text-slate-400 uppercase font-mono">{item.sku || 'N/A'}</td>
 
-                      <td className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-200">{stock} un</td>
-                      <td className="px-6 py-4 text-center text-sm text-slate-600 dark:text-slate-300">{min} un</td>
+                      <td className="px-6 py-4 text-center font-black text-slate-900 dark:text-white">{stock} un</td>
+                      <td className="px-6 py-4 text-center text-xs text-slate-400">{min} un</td>
 
                       <td className="px-6 py-4 text-center">
                         {diff < 0 ? (
-                          <span className="px-2 py-1 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 text-[10px] font-bold uppercase border border-rose-100 dark:border-rose-500/20">
+                          <span className="px-2 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase border border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20">
                             {diff} un
                           </span>
                         ) : diff === 0 ? (
-                          <span className="px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase border border-amber-100 dark:border-amber-500/20">
+                          <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black uppercase border border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20">
                             {diff} un
                           </span>
                         ) : (
-                          <span className="px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold uppercase border border-emerald-100 dark:border-emerald-500/20">
+                          <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
                             +{diff} un
                           </span>
                         )}
                       </td>
 
-                      <td className="px-6 py-4 text-right font-semibold text-slate-800 dark:text-white">{formatCurrency(rowValue)}</td>
+                      <td className="px-6 py-4 text-right font-black text-brand-600">{formatCurrency(rowValue)}</td>
 
                       <td className="px-6 py-4 text-center">
-                        <span className="text-xs text-slate-600 dark:text-slate-300">{formatLastMove(lastMove)}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{formatLastMove(lastMove)}</span>
                       </td>
                     </tr>
                   );
@@ -580,28 +580,28 @@ const Inventory: React.FC = () => {
 
           {!loading && filteredProducts.length === 0 && (
             <div className="p-20 text-center">
-              <Package className="inline-block text-slate-300 mb-4" size={48} />
-              <p className="text-slate-500 font-medium">Nenhum item no inventário.</p>
+              <Package className="inline-block text-slate-200 dark:text-slate-800 mb-4" size={48} />
+              <p className="text-slate-400 font-medium">Nenhum item no inventário.</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Histórico (últimas 20) */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <History size={18} className="text-slate-500" />
+            <History size={18} className="text-brand-600" />
             <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Últimas movimentações</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Entradas e saídas registradas com data e hora.</p>
+              <p className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Últimas movimentações</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest">Entradas e saídas registradas com auditoria Nexero.</p>
             </div>
           </div>
 
           <button
             onClick={fetchMovements}
             disabled={movementsLoading}
-            className="px-3 py-2 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60"
+            className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 transition-all disabled:opacity-60 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700"
           >
             {movementsLoading ? 'Atualizando...' : 'Atualizar'}
           </button>
@@ -611,11 +611,11 @@ const Inventory: React.FC = () => {
           {movementsLoading ? (
             <div className="py-10 text-center">
               <Loader2 className="animate-spin inline-block text-brand-600" size={28} />
-              <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Carregando movimentações...</p>
+              <p className="text-xs font-black text-slate-400 mt-2 uppercase tracking-widest">Carregando movimentações...</p>
             </div>
           ) : movements.length === 0 ? (
             <div className="py-10 text-center">
-              <p className="text-sm text-slate-500">Nenhuma movimentação registrada ainda.</p>
+              <p className="text-sm text-slate-400 italic">Nenhuma movimentação registrada ainda.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -624,38 +624,38 @@ const Inventory: React.FC = () => {
                 return (
                   <div
                     key={m.id}
-                    className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 p-4 flex items-start justify-between gap-4"
+                    className="rounded-2xl border border-slate-100 bg-slate-50/30 p-4 flex items-start justify-between gap-4 transition-all hover:border-brand-600/20 dark:border-slate-800 dark:bg-slate-800/20"
                   >
                     <div className="flex items-start gap-3">
                       <div
                         className={`h-10 w-10 rounded-xl flex items-center justify-center ${
                           m.movement_type === 'IN'
-                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                            : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'
                         }`}
                       >
                         {m.movement_type === 'IN' ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
                       </div>
 
                       <div>
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
                           {p?.name || 'Produto'}{' '}
-                          <span className="text-xs font-bold text-slate-400">{p?.sku ? `• ${p.sku}` : ''}</span>
+                          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{p?.sku ? `• ${p.sku}` : ''}</span>
                         </p>
 
                         <div className="flex flex-wrap items-center gap-2 mt-1">
                           <span
-                            className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase border ${
+                            className={`px-2 py-1 rounded-full text-[10px] font-black uppercase border ${
                               m.movement_type === 'IN'
-                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-500/20'
-                                : 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-100 dark:border-rose-500/20'
+                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                                : 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20'
                             }`}
                           >
                             {m.movement_type === 'IN' ? 'Entrada' : 'Saída'}
                           </span>
 
-                          <span className="text-xs text-slate-600 dark:text-slate-300">
-                            <span className="font-semibold">
+                          <span className="text-xs text-slate-500">
+                            <span className="font-black text-slate-900 dark:text-white">
                               {m.movement_type === 'IN' ? '+' : '-'}
                               {m.quantity}
                             </span>{' '}
@@ -663,17 +663,16 @@ const Inventory: React.FC = () => {
                           </span>
 
                           <span className="text-xs text-slate-400">
-                            {m.prev_stock} → <span className="font-semibold text-slate-600 dark:text-slate-200">{m.new_stock}</span> un
+                            {m.prev_stock} → <span className="font-black text-brand-600">{m.new_stock}</span> un
                           </span>
 
-                          {m.note ? <span className="text-xs text-slate-500 dark:text-slate-400">• {m.note}</span> : null}
+                          {m.note ? <span className="text-xs text-slate-400 italic">• {m.note}</span> : null}
                         </div>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{formatDateTime(m.created_at)}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Data/hora</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{formatDateTime(m.created_at)}</p>
                     </div>
                   </div>
                 );
@@ -686,109 +685,109 @@ const Inventory: React.FC = () => {
       {/* Modal Entrada/Saída (manual) */}
       {stockModalOpen && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closeStockModal} />
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={closeStockModal} />
           <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl">
-              <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-brand-600/10 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                    className={`h-12 w-12 rounded-2xl flex items-center justify-center border ${
                       stockMode === 'IN'
-                        ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                        : 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20'
                     }`}
                   >
-                    {stockMode === 'IN' ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
+                    {stockMode === 'IN' ? <ArrowUpRight size={22} /> : <ArrowDownLeft size={22} />}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    <p className="text-lg font-black uppercase tracking-tighter text-slate-900 dark:text-white">
                       {stockMode === 'IN' ? 'Registrar Entrada' : 'Registrar Saída'}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Ajuste o estoque do produto selecionado.</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ajuste de inventário Nexero</p>
                   </div>
                 </div>
                 <button
                   onClick={closeStockModal}
                   disabled={saving}
-                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
+                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-60 text-slate-400"
                   aria-label="Fechar"
                 >
-                  <X size={18} className="text-slate-500" />
+                  <X size={20} />
                 </button>
               </div>
 
-              <div className="p-5 space-y-4">
+              <div className="p-6 space-y-6">
                 {banner && (
                   <div
-                    className={`rounded-xl border px-4 py-3 flex items-start gap-2 ${
+                    className={`rounded-2xl border px-4 py-3 flex items-start gap-3 ${
                       banner.type === 'success'
-                        ? 'bg-emerald-50/60 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-rose-50/60 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20 text-rose-700 dark:text-rose-300'
+                        ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400'
+                        : 'bg-rose-50 border-rose-100 text-rose-600 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400'
                     }`}
                   >
-                    {banner.type === 'success' ? <CheckCircle2 size={18} className="mt-0.5" /> : <AlertTriangle size={18} className="mt-0.5" />}
-                    <div className="text-sm font-medium">{banner.message}</div>
+                    {banner.type === 'success' ? <CheckCircle2 size={20} className="mt-0.5" /> : <AlertTriangle size={20} className="mt-0.5" />}
+                    <div className="text-sm font-bold">{banner.message}</div>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Produto</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Produto</label>
                   <select
                     value={selectedProductId}
                     onChange={(e) => setSelectedProductId(e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                    className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 appearance-none dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                   >
                     {products.map((p) => (
-                      <option key={p.id} value={String(p.id)}>
+                      <option key={p.id} value={String(p.id)} className="bg-white dark:bg-slate-900">
                         {p.name} — Estoque: {p.stock} un
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Quantidade</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quantidade</label>
                     <input
                       type="number"
                       min={1}
                       step={1}
                       value={qty}
                       onChange={(e) => setQty(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                       placeholder="Ex: 10"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Observação (opcional)</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observação</label>
                     <input
                       type="text"
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
-                      placeholder="Ex: reposição / perda / ajuste"
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                      placeholder="Ex: reposição"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="p-5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+              <div className="p-6 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
                 <button
                   onClick={closeStockModal}
                   disabled={saving}
-                  className="px-4 py-2 rounded-xl font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60"
+                  className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all disabled:opacity-60"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={applyStockChange}
                   disabled={saving}
-                  className={`px-4 py-2 rounded-xl font-semibold text-white transition-all disabled:opacity-60 flex items-center gap-2 ${
-                    stockMode === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                  className={`px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] text-white transition-all disabled:opacity-60 flex items-center gap-2 shadow-lg ${
+                    stockMode === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20' : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20'
                   }`}
                 >
-                  {saving && <Loader2 className="animate-spin" size={16} />}
+                  {saving && <Loader2 className="animate-spin" size={14} />}
                   {stockMode === 'IN' ? 'Confirmar Entrada' : 'Confirmar Saída'}
                 </button>
               </div>
@@ -797,58 +796,60 @@ const Inventory: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Entrada por Nota/Compra */}
+      {/* Modal Entrada por Nota (compra) */}
       {purchaseOpen && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closePurchaseModal} />
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={closePurchaseModal} />
           <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="w-full max-w-3xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl">
-              <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="w-full max-w-3xl rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-brand-600/10 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-200">
-                    <FileText size={18} />
+                  <div className="h-12 w-12 rounded-2xl flex items-center justify-center bg-brand-50 text-brand-600 border border-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:border-brand-500/20">
+                    <FileText size={22} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Entrada por Nota/Compra</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Lance itens em lote e anexe a nota (PDF/Imagem).</p>
+                    <p className="text-lg font-black uppercase tracking-tighter text-slate-900 dark:text-white">Entrada por Nota/Compra</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gestão de lotes e auditoria Nexero</p>
                   </div>
                 </div>
                 <button
                   onClick={closePurchaseModal}
                   disabled={purchaseSaving}
-                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
+                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-60 text-slate-400"
                   aria-label="Fechar"
                 >
-                  <X size={18} className="text-slate-500" />
+                  <X size={20} />
                 </button>
               </div>
 
-              <div className="p-5 space-y-4 max-h-[70vh] overflow-auto">
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-auto custom-scrollbar">
                 {purchaseBanner && (
                   <div
-                    className={`rounded-xl border px-4 py-3 flex items-start gap-2 ${
+                    className={`rounded-2xl border px-4 py-3 flex items-start gap-3 ${
                       purchaseBanner.type === 'success'
-                        ? 'bg-emerald-50/60 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-rose-50/60 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20 text-rose-700 dark:text-rose-300'
+                        ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400'
+                        : 'bg-rose-50 border-rose-100 text-rose-600 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400'
                     }`}
                   >
-                    {purchaseBanner.type === 'success' ? <CheckCircle2 size={18} className="mt-0.5" /> : <AlertTriangle size={18} className="mt-0.5" />}
-                    <div className="text-sm font-medium">{purchaseBanner.message}</div>
+                    {purchaseBanner.type === 'success' ? <CheckCircle2 size={20} className="mt-0.5" /> : <AlertTriangle size={20} className="mt-0.5" />}
+                    <div className="text-sm font-bold">{purchaseBanner.message}</div>
                   </div>
                 )}
 
                 {/* ✅ Anexo */}
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/60 dark:bg-slate-800/20">
+                <div className="rounded-2xl border border-slate-100 p-5 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/20">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Paperclip size={16} className="text-slate-500" />
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                        <Paperclip size={18} />
+                      </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Anexar Nota (PDF/Imagem)</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Esse arquivo será salvo no Supabase Storage.</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">Anexar Nota (PDF/Imagem)</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Auditoria digital Nexero</p>
                       </div>
                     </div>
 
-                    <label className="px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                    <label className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-600 text-white hover:bg-brand-700 transition-all cursor-pointer shadow-lg shadow-brand-600/20">
                       Escolher arquivo
                       <input
                         type="file"
@@ -864,109 +865,109 @@ const Inventory: React.FC = () => {
                   </div>
 
                   {purchaseFile ? (
-                    <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2">
+                    <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:bg-slate-800 dark:border-slate-700">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{purchaseFile.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="text-sm font-bold text-slate-700 truncate dark:text-slate-300">{purchaseFile.name}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           {(purchaseFile.size / 1024 / 1024).toFixed(2)} MB • {purchaseFile.type || 'arquivo'}
                         </p>
                       </div>
                       <button
                         onClick={() => setPurchaseFile(null)}
                         disabled={purchaseSaving}
-                        className="h-9 w-9 rounded-xl flex items-center justify-center bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all disabled:opacity-60"
+                        className="h-9 w-9 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all disabled:opacity-60 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20"
                         title="Remover anexo"
                       >
                         <Trash2 size={16} />
                       </button>
                     </div>
                   ) : (
-                    <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                      Nenhum arquivo selecionado.
+                    <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center italic">
+                      Nenhum arquivo anexado.
                     </p>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tipo</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo</label>
                     <select
                       value={docType}
                       onChange={(e) => setDocType(e.target.value as any)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 appearance-none dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                     >
-                      <option value="NF">NF</option>
-                      <option value="PEDIDO">Pedido</option>
-                      <option value="COMPRA">Compra</option>
+                      <option value="NF" className="bg-white dark:bg-slate-900">NF</option>
+                      <option value="PEDIDO" className="bg-white dark:bg-slate-900">Pedido</option>
+                      <option value="COMPRA" className="bg-white dark:bg-slate-900">Compra</option>
                     </select>
                   </div>
 
                   <div className="space-y-2 md:col-span-1">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Número</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Número</label>
                     <input
                       value={docNumber}
                       onChange={(e) => setDocNumber(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                       placeholder="Ex: 12345"
                     />
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fornecedor</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fornecedor</label>
                     <input
                       value={supplierName}
                       onChange={(e) => setSupplierName(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                       placeholder="Ex: Distribuidora X"
                     />
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Data de emissão (opcional)</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data de emissão</label>
                     <input
                       type="date"
                       value={issuedAt}
                       onChange={(e) => setIssuedAt(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                     />
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Observações</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observações</label>
                     <input
                       value={purchaseNotes}
                       onChange={(e) => setPurchaseNotes(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
-                      placeholder="Ex: compra do mês / reposição"
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                      placeholder="Ex: compra do mês"
                     />
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                  <div className="px-4 py-3 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Itens</p>
+                <div className="rounded-2xl border border-slate-100 overflow-hidden bg-slate-50/30 dark:border-slate-800 dark:bg-slate-800/20">
+                  <div className="px-5 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between dark:bg-slate-800/50 dark:border-slate-800">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Itens da Nota</p>
                     <button
                       onClick={addPurchaseItem}
                       disabled={purchaseSaving}
-                      className="px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60 flex items-center gap-2"
+                      className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-600 text-white hover:bg-brand-700 transition-all disabled:opacity-60 flex items-center gap-2 shadow-lg shadow-brand-600/20"
                     >
-                      <Plus size={14} /> Adicionar item
+                      <Plus size={14} strokeWidth={3} /> Adicionar item
                     </button>
                   </div>
 
-                  <div className="p-4 space-y-3">
+                  <div className="p-5 space-y-4">
                     {purchaseItems.map((it, idx) => (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                      <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-white p-4 rounded-2xl border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
                         <div className="md:col-span-6 space-y-2">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Produto</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Produto</label>
                           <select
                             value={it.product_id}
                             onChange={(e) => updatePurchaseItem(idx, { product_id: e.target.value })}
-                            className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                            className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 appearance-none dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                           >
-                            <option value="">Selecione...</option>
+                            <option value="" className="bg-white dark:bg-slate-900">Selecione...</option>
                             {products.map((p) => (
-                              <option key={p.id} value={String(p.id)}>
+                              <option key={p.id} value={String(p.id)} className="bg-white dark:bg-slate-900">
                                 {p.name} {p.sku ? `• ${p.sku}` : ''}
                               </option>
                             ))}
@@ -974,26 +975,26 @@ const Inventory: React.FC = () => {
                         </div>
 
                         <div className="md:col-span-2 space-y-2">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Qtd</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Qtd</label>
                           <input
                             type="number"
                             min={1}
                             step={1}
                             value={it.quantity}
                             onChange={(e) => updatePurchaseItem(idx, { quantity: e.target.value })}
-                            className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                            className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                           />
                         </div>
 
                         <div className="md:col-span-3 space-y-2">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Custo unit.</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Custo unit.</label>
                           <input
                             type="number"
                             min={0}
                             step={0.01}
                             value={it.unit_cost}
                             onChange={(e) => updatePurchaseItem(idx, { unit_cost: e.target.value })}
-                            className="w-full px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                            className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                           />
                         </div>
 
@@ -1001,10 +1002,10 @@ const Inventory: React.FC = () => {
                           <button
                             onClick={() => removePurchaseItem(idx)}
                             disabled={purchaseSaving || purchaseItems.length <= 1}
-                            className="h-10 w-10 rounded-xl flex items-center justify-center bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all disabled:opacity-60"
+                            className="h-12 w-12 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all disabled:opacity-60 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20"
                             title="Remover"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
 
@@ -1015,10 +1016,9 @@ const Inventory: React.FC = () => {
                             const c = Number(it.unit_cost);
                             if (!p || !Number.isFinite(q) || q <= 0 || !Number.isFinite(c) || c < 0) return null;
                             return (
-                              <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Estoque atual: <span className="font-semibold">{Number(p.stock)}</span> un •
-                                Após entrada: <span className="font-semibold">{Number(p.stock) + q}</span> un •
-                                Subtotal: <span className="font-semibold">{formatCurrency(q * c)}</span>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                Estoque: <span className="text-slate-900 dark:text-white">{Number(p.stock)}</span> → <span className="text-emerald-600 dark:text-emerald-400">{Number(p.stock) + q}</span> un •
+                                Subtotal: <span className="text-brand-600">{formatCurrency(q * c)}</span>
                               </p>
                             );
                           })()}
@@ -1027,27 +1027,27 @@ const Inventory: React.FC = () => {
                     ))}
                   </div>
 
-                  <div className="px-4 py-3 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Total</p>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(purchaseTotal)}</p>
+                  <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between dark:bg-slate-800/50 dark:border-slate-800">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total da Nota</p>
+                    <p className="text-xl font-black text-brand-600 tracking-tighter">{formatCurrency(purchaseTotal)}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="p-5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+              <div className="p-6 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
                 <button
                   onClick={closePurchaseModal}
                   disabled={purchaseSaving}
-                  className="px-4 py-2 rounded-xl font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-60"
+                  className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all disabled:opacity-60"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={submitPurchaseReceipt}
                   disabled={purchaseSaving}
-                  className="px-4 py-2 rounded-xl font-semibold text-white bg-brand-600 hover:opacity-90 transition-all disabled:opacity-60 flex items-center gap-2"
+                  className="px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] text-white bg-brand-600 hover:bg-brand-700 transition-all disabled:opacity-60 flex items-center gap-2 shadow-lg shadow-brand-600/20"
                 >
-                  {purchaseSaving && <Loader2 className="animate-spin" size={16} />}
+                  {purchaseSaving && <Loader2 className="animate-spin" size={14} />}
                   Confirmar Entrada
                 </button>
               </div>

@@ -13,7 +13,8 @@ import {
   Check,
   Inbox,
   RefreshCw,
-  Info
+  Info,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchCnpjData } from '../utils/helpers';
@@ -21,7 +22,7 @@ import { supabase } from '../services/supabase';
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'WAITING_CONFIRMATION';
 
-const BRAND_HEX = '#007FFF';
+const BRAND_HEX = '#2563eb';
 
 // ✅ 2 imagens (apenas) para rodar no banner da esquerda (vindo direto de /public)
 const HERO_SLIDES = ['/slide1.png', '/slide2.png'];
@@ -229,13 +230,13 @@ const Login: React.FC = () => {
   const isCnpjReady = documentType === 'CNPJ' && signupData.document.replace(/\D/g, '').length === 14;
   const showConfirmError = signupData.confirmPassword.length > 0 && signupData.password !== signupData.confirmPassword;
 
-  if (isRedirecting) {
+   if (isRedirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6 overflow-hidden">
         <div className="flex flex-col items-center gap-8 animate-in zoom-in-95 duration-700">
           <div className="relative">
             <div className="w-32 h-32 bg-brand-600 rounded-[3rem] flex items-center justify-center text-white shadow-2xl shadow-brand-600/40 animate-bounce">
-              <Zap size={64} className="fill-current" />
+              <Sparkles size={64} className="fill-current" />
             </div>
             <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-emerald-500 rounded-full border-4 border-white dark:border-slate-950 flex items-center justify-center text-white shadow-xl">
               <CheckCircle2 size={24} />
@@ -279,7 +280,7 @@ const Login: React.FC = () => {
           <div className="flex items-center gap-4 mt-[-34px]">
             <div className="flex items-center gap-4 bg-white/70 backdrop-blur-md rounded-3xl px-5 py-3 shadow-lg shadow-black/5">
               <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-brand-600/30">
-                <Zap size={28} className="text-white fill-current" />
+                <Sparkles size={28} className="text-white fill-current" />
               </div>
               <h1 className="text-4xl font-black tracking-tighter uppercase text-slate-900">NEXERO</h1>
             </div>
@@ -516,7 +517,7 @@ const Login: React.FC = () => {
           </div>
 
           <div className="text-center">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Nexero Cloud Platform &copy; 2024</p>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Nexero Enterprise &copy; 2024</p>
           </div>
         </div>
       </div>

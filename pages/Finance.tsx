@@ -37,7 +37,7 @@ const Finance: React.FC = () => {
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Fluxo de Caixa Cloud</h2>
           <p className="text-slate-500 dark:text-slate-400">Dados consolidados do seu banco de dados.</p>
         </div>
-        <button className="bg-indigo-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">
+        <button className="bg-brand-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-brand-700 shadow-lg shadow-brand-600/20">
           Novo Lançamento
         </button>
       </div>
@@ -62,7 +62,7 @@ const Finance: React.FC = () => {
             <p className="text-sm font-medium text-slate-500">Saldo Disponível</p>
             <p className="text-2xl font-bold text-slate-800 dark:text-white mt-1">{formatCurrency(totals.income - totals.expense)}</p>
           </div>
-          <DollarSign className="text-indigo-600" size={32} />
+          <DollarSign className="text-brand-600" size={32} />
         </div>
       </div>
 
@@ -72,7 +72,7 @@ const Finance: React.FC = () => {
         </div>
         
         {loading ? (
-          <div className="p-20 text-center"><Loader2 className="animate-spin inline-block text-indigo-600" /></div>
+          <div className="p-20 text-center"><Loader2 className="animate-spin inline-block text-brand-600" /></div>
         ) : (
           <table className="w-full">
             <tbody className="divide-y dark:divide-slate-800">

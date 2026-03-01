@@ -258,13 +258,13 @@ const Products: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Catálogo de Produtos</h2>
-          <p className="text-slate-500 dark:text-slate-400">Controle seu estoque e preços em tempo real na nuvem.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Produtos & Catálogo</h2>
+          <p className="text-slate-500 italic text-sm">Gestão profissional de estoque e catálogo Nexero.</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setIsCategoriesOpen(true)}
-            className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-5 py-3 rounded-xl font-black flex items-center justify-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+            className="bg-white border border-slate-200 text-slate-600 px-5 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition-all active:scale-95"
             type="button"
           >
             <Layers size={18} />
@@ -276,10 +276,10 @@ const Products: React.FC = () => {
               setEditingProduct(null);
               setIsModalOpen(true);
             }}
-            className="bg-indigo-600 text-white px-5 py-3 rounded-xl font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
+            className="bg-brand-600 text-white px-5 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20 active:scale-95"
             type="button"
           >
-            <Plus size={20} />
+            <Plus size={20} strokeWidth={3} />
             Novo Produto
           </button>
         </div>
@@ -292,24 +292,24 @@ const Products: React.FC = () => {
       )}
 
       {/* Categories Tabs */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b dark:border-slate-800 flex flex-col gap-4 bg-slate-50/50 dark:bg-slate-800/20">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+        <div className="p-4 border-b border-slate-100 flex flex-col gap-4 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/20">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Tag size={16} className="text-slate-400" />
+              <Tag size={16} className="text-brand-600" />
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Categorias</p>
             </div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{filtered.length} itens</p>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
             <button
               type="button"
               onClick={() => setSelectedCategory('ALL')}
               className={`shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
                 selectedCategory === 'ALL'
-                  ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                  ? 'bg-brand-600 text-white border-brand-600 shadow-lg shadow-brand-600/20'
+                  : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700'
               }`}
             >
               Todas
@@ -322,8 +322,8 @@ const Products: React.FC = () => {
                 onClick={() => setSelectedCategory(c)}
                 className={`shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
                   selectedCategory === c
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/20'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                    ? 'bg-brand-600 text-white border-brand-600 shadow-lg shadow-brand-600/20'
+                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700'
                 }`}
               >
                 {c}
@@ -332,11 +332,11 @@ const Products: React.FC = () => {
           </div>
 
           <div className="relative group max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-600 transition-colors" size={18} />
             <input
               type="text"
               placeholder="Filtrar por nome ou SKU..."
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm font-semibold"
+              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all text-sm font-bold text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -348,13 +348,13 @@ const Products: React.FC = () => {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-white dark:bg-slate-900 h-64 rounded-2xl animate-pulse border border-slate-100 dark:border-slate-800" />
+                <div key={i} className="bg-slate-50 h-64 rounded-2xl animate-pulse border border-slate-100 dark:bg-slate-800 dark:border-slate-700" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-16">
-              <Package className="inline-block text-slate-200 mb-4" size={56} />
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum produto encontrado</p>
+              <Package className="inline-block text-slate-200 dark:text-slate-800 mb-4" size={56} />
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Nenhum produto encontrado</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -364,27 +364,27 @@ const Products: React.FC = () => {
                 return (
                   <div
                     key={product.id}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group"
+                    className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:border-brand-600/30 transition-all group dark:bg-slate-900 dark:border-slate-800"
                   >
-                    <div className="relative h-48 bg-slate-100 dark:bg-slate-800">
+                    <div className="relative h-48 bg-slate-50 dark:bg-slate-800">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                        <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-700">
                           <Package size={48} />
                         </div>
                       )}
 
                       {Number(product.stock || 0) <= 0 && (
-                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center">
-                          <span className="bg-rose-500 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest">Sem Estoque</span>
+                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center dark:bg-slate-900/60">
+                          <span className="bg-rose-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-rose-600/20">Sem Estoque</span>
                         </div>
                       )}
 
                       <div className="absolute top-3 right-3">
                         <button
                           onClick={(e) => openFloatingMenu(e, product)}
-                          className="p-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur shadow-sm rounded-lg text-slate-600 dark:text-slate-400 hover:text-indigo-600 transition-colors"
+                          className="p-2 bg-white/80 backdrop-blur border border-slate-200 shadow-sm rounded-lg text-slate-500 hover:bg-brand-600 hover:text-white dark:bg-slate-900/80 dark:border-slate-700 transition-all"
                           type="button"
                         >
                           <MoreVertical size={16} />
@@ -393,29 +393,29 @@ const Products: React.FC = () => {
                     </div>
 
                     <div className="p-5">
-                      <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
+                      <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-1">
                         {product.category || 'Sem Categoria'}
                       </p>
 
                       {/* ✅ mini badge do desconto recomendado */}
                       {recPct > 0 && (
                         <div className="mb-2">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-500/20 text-[9px] font-black uppercase tracking-widest">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest dark:text-emerald-400">
                             Desc. rec: {recPct}%
                           </span>
                         </div>
                       )}
 
-                      <h4 className="font-black text-slate-800 dark:text-white mb-1 line-clamp-1">{product.name}</h4>
-                      <p className="text-xs text-slate-500 mb-4 uppercase">SKU: {product.sku || 'N/A'}</p>
+                      <h4 className="font-bold text-slate-900 mb-1 line-clamp-1 dark:text-white">{product.name}</h4>
+                      <p className="text-[10px] text-slate-400 mb-4 uppercase font-mono">SKU: {product.sku || 'N/A'}</p>
 
                       <div className="flex items-end justify-between">
                         <div>
-                          <p className="text-xs text-slate-400 font-medium">Preço Venda</p>
-                          <p className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(product.price)}</p>
+                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Preço Venda</p>
+                          <p className="text-lg font-black text-brand-600 tracking-tighter">{formatCurrency(product.price)}</p>
                         </div>
-                        <div className={`text-right ${Number(product.stock || 0) < Number(product.min_stock || 0) ? 'text-amber-600' : 'text-slate-500'}`}>
-                          <p className="text-[10px] font-black uppercase tracking-tighter">Estoque</p>
+                        <div className={`text-right ${Number(product.stock || 0) < Number(product.min_stock || 0) ? 'text-rose-500' : 'text-slate-400'}`}>
+                          <p className="text-[10px] font-black uppercase tracking-widest">Estoque</p>
                           <p className="text-sm font-black">{product.stock} un</p>
                         </div>
                       </div>
@@ -441,8 +441,8 @@ const Products: React.FC = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+              <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{menu.product.name}</p>
               </div>
 
@@ -528,22 +528,22 @@ const Products: React.FC = () => {
 const MenuItem: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
   <button
     onClick={onClick}
-    className="w-full px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+    className="w-full px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-brand-600 hover:text-white flex items-center gap-2 transition-all dark:text-slate-400"
     type="button"
   >
-    <span className="text-slate-500">{icon}</span>
-    <span className="flex-1 text-left">{label}</span>
+    <span className="opacity-70">{icon}</span>
+    <span className="flex-1 text-left uppercase tracking-widest text-[10px]">{label}</span>
   </button>
 );
 
 const MenuItemDanger: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
   <button
     onClick={onClick}
-    className="w-full px-3 py-2 rounded-xl text-xs font-black text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2"
+    className="w-full px-3 py-2 rounded-xl text-xs font-black text-rose-500 hover:bg-rose-600 hover:text-white flex items-center gap-2 transition-all"
     type="button"
   >
-    <span className="text-rose-500">{icon}</span>
-    <span className="flex-1 text-left">{label}</span>
+    <span>{icon}</span>
+    <span className="flex-1 text-left uppercase tracking-widest text-[10px]">{label}</span>
   </button>
 );
 
@@ -638,14 +638,14 @@ const CategoriesModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-[99998] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !busy && onClose()} />
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
-        <div className="p-5 border-b dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+      <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => !busy && onClose()} />
+      <div className="relative w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
           <div>
-            <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Categorias</p>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white">Gerenciar categorias</h3>
+            <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Categorias</p>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase">Gerenciar categorias</h3>
           </div>
-          <button onClick={() => !busy && onClose()} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" type="button">
+          <button onClick={() => !busy && onClose()} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400" type="button">
             <X size={18} />
           </button>
         </div>
@@ -653,7 +653,7 @@ const CategoriesModal: React.FC<{
         <div className="p-5 space-y-4">
           <div className="flex gap-2">
             <input
-              className="flex-1 px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 text-sm font-bold"
+              className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-sm font-bold text-slate-900 placeholder:text-slate-400 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
               placeholder="Nova categoria (ex: Lubrificantes)"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -662,7 +662,7 @@ const CategoriesModal: React.FC<{
             <button
               onClick={createCategory}
               disabled={busy || !normalizeCat(newName)}
-              className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-[10px] uppercase tracking-widest disabled:opacity-50 flex items-center gap-2 transition-all"
               type="button"
             >
               <PlusCircle size={16} />
@@ -670,21 +670,21 @@ const CategoriesModal: React.FC<{
             </button>
           </div>
 
-          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 bg-slate-50/70 dark:bg-slate-800/30 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/30 dark:border-slate-800 dark:bg-slate-800/20">
+            <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between dark:bg-slate-800/50 dark:border-slate-800">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lista</p>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{categories.length}</p>
+              <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">{categories.length}</p>
             </div>
 
-            <div className="max-h-[320px] overflow-y-auto">
+            <div className="max-h-[320px] overflow-y-auto custom-scrollbar">
               {loading ? (
                 <div className="p-5 text-center">
-                  <Loader2 className="animate-spin inline-block text-indigo-600 mb-2" size={22} />
+                  <Loader2 className="animate-spin inline-block text-brand-600 mb-2" size={22} />
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Carregando...</p>
                 </div>
               ) : categories.length === 0 ? (
                 <div className="p-6 text-center">
-                  <Tag className="inline-block text-slate-200 mb-3" size={40} />
+                  <Tag className="inline-block text-slate-200 dark:text-slate-800 mb-3" size={40} />
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma categoria criada</p>
                 </div>
               ) : (
@@ -693,7 +693,7 @@ const CategoriesModal: React.FC<{
                     {editingId === c.id ? (
                       <div className="flex-1 flex items-center gap-2">
                         <input
-                          className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                          className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600/20 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
                           disabled={busy}
@@ -701,7 +701,7 @@ const CategoriesModal: React.FC<{
                         <button
                           onClick={saveRename}
                           disabled={busy || !normalizeCat(editingName)}
-                          className="px-3 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-xs font-black uppercase tracking-widest disabled:opacity-50 flex items-center gap-2"
+                          className="px-3 py-2 rounded-xl bg-brand-600 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50 flex items-center gap-2"
                           type="button"
                         >
                           <Save size={16} />
@@ -714,7 +714,7 @@ const CategoriesModal: React.FC<{
                             setEditingName('');
                             setEditingOldName('');
                           }}
-                          className="px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white"
+                          className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
                           type="button"
                         >
                           Cancelar
@@ -723,7 +723,7 @@ const CategoriesModal: React.FC<{
                     ) : (
                       <>
                         <div className="min-w-0">
-                          <p className="text-sm font-black text-slate-900 dark:text-white truncate">{c.name}</p>
+                          <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{c.name}</p>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -733,14 +733,14 @@ const CategoriesModal: React.FC<{
                               setEditingName(c.name);
                               setEditingOldName(c.name);
                             }}
-                            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600"
+                            className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-brand-600 dark:hover:bg-slate-800 transition-all"
                             type="button"
                           >
                             <Edit3 size={16} />
                           </button>
                           <button
                             onClick={() => setConfirmDelete(c)}
-                            className="p-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600"
+                            className="p-2 rounded-xl hover:bg-rose-50 text-rose-500 hover:text-rose-600 dark:hover:bg-rose-500/10 transition-all"
                             type="button"
                           >
                             <Trash2 size={16} />
@@ -756,16 +756,16 @@ const CategoriesModal: React.FC<{
         </div>
 
         {confirmDelete && (
-          <div className="p-5 border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
+          <div className="p-5 border-t border-slate-100 bg-rose-50 dark:border-slate-800 dark:bg-rose-500/5">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Excluir categoria <span className="font-black">{confirmDelete.name}</span>?
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                Excluir categoria <span className="font-black text-slate-900 dark:text-white">{confirmDelete.name}</span>?
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setConfirmDelete(null)}
                   disabled={busy}
-                  className="px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white disabled:opacity-50"
+                  className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-white disabled:opacity-50"
                   type="button"
                 >
                   Cancelar
@@ -773,7 +773,7 @@ const CategoriesModal: React.FC<{
                 <button
                   onClick={doDelete}
                   disabled={busy}
-                  className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-widest disabled:opacity-50 flex items-center gap-2"
+                  className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50 flex items-center gap-2 transition-all shadow-lg shadow-rose-600/20"
                   type="button"
                 >
                   <Trash2 size={16} />
@@ -781,7 +781,7 @@ const CategoriesModal: React.FC<{
                 </button>
               </div>
             </div>
-            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-[11px] text-slate-400 italic">
               Observação: os produtos que já têm essa categoria continuarão com o texto salvo no produto.
             </p>
           </div>
@@ -945,26 +945,26 @@ const ProductModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !isSaving && onClose()} />
-      <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
-        <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+      <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => !isSaving && onClose()} />
+      <div className="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 dark:bg-slate-900 dark:border-slate-800">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20">
-              <Package size={24} />
+            <div className="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-600/20">
+              <Package size={24} strokeWidth={3} />
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{editing ? 'Editar Produto' : 'Novo Produto'}</h3>
-              <p className="text-xs text-slate-500 font-medium">{editing ? 'Atualize dados, foto e categoria.' : 'Disponível imediatamente para venda no PDV.'}</p>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase dark:text-white">{editing ? 'Editar Produto' : 'Novo Produto'}</h3>
+              <p className="text-xs text-slate-500 font-medium italic">{editing ? 'Atualize dados, foto e categoria.' : 'Disponível imediatamente para venda no PDV.'}</p>
             </div>
           </div>
-          <button onClick={() => !isSaving && onClose()} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" type="button">
+          <button onClick={() => !isSaving && onClose()} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400" type="button">
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           {error && (
-            <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-4 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold">
+            <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400">
               <AlertCircle size={18} /> {error}
             </div>
           )}
@@ -972,14 +972,14 @@ const ProductModal: React.FC<{
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {/* Foto */}
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Foto do Produto</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Foto do Produto</label>
 
-              <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
-                <div className="h-44 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden dark:bg-slate-800 dark:border-slate-700">
+                <div className="h-44 bg-white flex items-center justify-center dark:bg-slate-900">
                   {imagePreview ? (
-                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    <div className="text-slate-300 flex flex-col items-center gap-2">
+                    <div className="text-slate-200 dark:text-slate-700 flex flex-col items-center gap-2">
                       <ImageIcon size={40} />
                       <span className="text-[10px] font-black uppercase tracking-widest">Sem imagem</span>
                     </div>
@@ -987,14 +987,14 @@ const ProductModal: React.FC<{
                 </div>
 
                 <div className="p-4 flex flex-col gap-3">
-                  <input type="file" accept="image/*" onChange={(e) => pickFile(e.target.files?.[0] || null)} className="text-xs" disabled={isSaving} />
+                  <input type="file" accept="image/*" onChange={(e) => pickFile(e.target.files?.[0] || null)} className="text-xs text-slate-400" disabled={isSaving} />
 
                   <div className="relative">
                     <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
                       type="text"
                       placeholder="Ou cole uma URL da imagem (opcional)"
-                      className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all placeholder:text-slate-300 dark:bg-slate-900 dark:border-slate-700 dark:text-white"
                       value={formData.image_url}
                       onChange={(e) => {
                         setFormData({ ...formData, image_url: e.target.value });
@@ -1004,7 +1004,7 @@ const ProductModal: React.FC<{
                     />
                   </div>
 
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Preferência: enviar arquivo (Storage). URL fica como alternativa.</p>
+                  <p className="text-[11px] text-slate-400 italic">Preferência: enviar arquivo (Storage). URL fica como alternativa.</p>
                 </div>
               </div>
             </div>
@@ -1012,10 +1012,10 @@ const ProductModal: React.FC<{
             {/* Dados */}
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Nome do Produto</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Produto</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                  className="w-full px-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   disabled={isSaving}
@@ -1024,10 +1024,10 @@ const ProductModal: React.FC<{
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">SKU / Código</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SKU / Código</label>
                   <input
                     type="text"
-                    className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all uppercase"
+                    className="w-full px-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all uppercase font-mono dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                     disabled={isSaving}
@@ -1036,19 +1036,19 @@ const ProductModal: React.FC<{
 
                 {/* Categoria: select + criar nova */}
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                    <Tag size={14} /> Categoria
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <Tag size={14} className="text-brand-600" /> Categoria
                   </label>
 
                   <select
-                    className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                    className="w-full px-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all appearance-none dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                     value={formData.category || ''}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     disabled={isSaving || creatingCategory}
                   >
-                    <option value="">Sem categoria</option>
+                    <option value="" className="bg-white dark:bg-slate-900">Sem categoria</option>
                     {categoryNames.map((c) => (
-                      <option key={c} value={c}>
+                      <option key={c} value={c} className="bg-white dark:bg-slate-900">
                         {c}
                       </option>
                     ))}
@@ -1057,7 +1057,7 @@ const ProductModal: React.FC<{
                   {!creatingCategory ? (
                     <button
                       onClick={() => setCreatingCategory(true)}
-                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all flex items-center justify-center gap-2"
+                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-brand-600 text-[10px] font-black uppercase tracking-widest hover:bg-brand-600 hover:text-white transition-all flex items-center justify-center gap-2 dark:bg-slate-800 dark:border-slate-700"
                       type="button"
                       disabled={isSaving}
                     >
@@ -1067,7 +1067,7 @@ const ProductModal: React.FC<{
                   ) : (
                     <div className="space-y-2">
                       <input
-                        className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600/20 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         placeholder="Nome da nova categoria"
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
@@ -1076,7 +1076,7 @@ const ProductModal: React.FC<{
                       <div className="flex gap-2">
                         <button
                           onClick={createCategoryInline}
-                          className="flex-1 px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
+                          className="flex-1 px-4 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
                           type="button"
                           disabled={isSaving || !normalizeCat(newCategoryName)}
                         >
@@ -1089,7 +1089,7 @@ const ProductModal: React.FC<{
                             setCreatingCategory(false);
                             setNewCategoryName('');
                           }}
-                          className="px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest"
+                          className="px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-slate-600 transition-colors dark:bg-slate-800 dark:border-slate-700"
                           type="button"
                           disabled={isSaving}
                         >
@@ -1101,11 +1101,11 @@ const ProductModal: React.FC<{
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Preço de Venda (R$)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço de Venda (R$)</label>
                   <input
                     type="number"
                     step="0.01"
-                    className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                    className="w-full px-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all font-mono dark:bg-slate-800 dark:border-slate-700 dark:text-brand-400"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     disabled={isSaving}
@@ -1114,7 +1114,7 @@ const ProductModal: React.FC<{
 
                 {/* ✅ NOVO: desconto recomendado */}
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                     Desconto recomendado (%)
                   </label>
                   <input
@@ -1122,22 +1122,22 @@ const ProductModal: React.FC<{
                     step="0.01"
                     min={0}
                     max={100}
-                    className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                    className="w-full px-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono dark:bg-slate-800 dark:border-slate-700 dark:text-emerald-400"
                     value={formData.recommended_discount_pct}
                     onChange={(e) => setFormData({ ...formData, recommended_discount_pct: e.target.value })}
                     disabled={isSaving}
                     placeholder="Ex: 5"
                   />
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Esse % aparece sugerido na hora da venda (mas poderá ser alterado manualmente).
+                  <p className="text-[11px] text-slate-400 italic">
+                    Esse % aparece sugerido na hora da venda.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Estoque</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estoque</label>
                   <input
                     type="number"
-                    className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                    className="w-full px-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all font-mono dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                     disabled={isSaving}
@@ -1145,10 +1145,10 @@ const ProductModal: React.FC<{
                 </div>
 
                 <div className="space-y-2 sm:col-span-2">
-                  <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Mínimo de Segurança</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mínimo de Segurança</label>
                   <input
                     type="number"
-                    className="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                    className="w-full px-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600/20 transition-all font-mono dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                     value={formData.min_stock}
                     onChange={(e) => setFormData({ ...formData, min_stock: e.target.value })}
                     disabled={isSaving}
@@ -1159,10 +1159,10 @@ const ProductModal: React.FC<{
           </div>
         </div>
 
-        <div className="p-6 border-t dark:border-slate-800 flex gap-4 bg-slate-50/50 dark:bg-slate-800/20">
+        <div className="p-6 border-t border-slate-100 flex gap-4 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
           <button
             onClick={() => !isSaving && onClose()}
-            className="flex-1 py-4 bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl hover:bg-slate-100 transition-all uppercase tracking-widest text-[10px] disabled:opacity-50"
+            className="flex-1 py-4 bg-white border border-slate-200 text-slate-400 font-black rounded-2xl hover:bg-slate-50 transition-all uppercase tracking-widest text-[10px] disabled:opacity-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700"
             disabled={isSaving}
             type="button"
           >
@@ -1171,7 +1171,7 @@ const ProductModal: React.FC<{
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex-2 w-2/3 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest text-[10px] disabled:opacity-50"
+            className="flex-2 w-2/3 py-4 bg-brand-600 text-white font-black rounded-2xl hover:bg-brand-700 shadow-xl shadow-brand-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest text-[10px] disabled:opacity-50"
             type="button"
           >
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : editing ? <Pencil size={16} /> : <CheckCircle2 size={16} />}

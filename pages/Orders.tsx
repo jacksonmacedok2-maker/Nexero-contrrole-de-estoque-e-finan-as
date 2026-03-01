@@ -61,28 +61,28 @@ const Orders: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
             Vendas Realizadas
           </h2>
-          <p className="text-xs text-slate-500 font-medium italic">
-            Histórico de transações sincronizado em tempo real.
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic">
+            Histórico de transações sincronizado em tempo real com a qualidade Nexero.
           </p>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="w-full md:w-auto bg-brand-600 text-white px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-brand-700 shadow-xl shadow-brand-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest"
+          className="w-full md:w-auto bg-brand-600 text-white px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-brand-700 shadow-xl shadow-brand-600/20 active:scale-95 transition-all text-[10px] uppercase tracking-widest"
         >
-          <Plus size={18} /> Novo Pedido
+          <Plus size={18} strokeWidth={3} /> Novo Pedido
         </button>
       </div>
 
       <div className="relative group">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-600 transition-colors" size={18} />
         <input
           type="text"
           placeholder="Pesquisar por cliente ou código..."
-          className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-500/10 text-xs font-bold transition-all"
+          className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-600/20 text-sm font-bold text-slate-900 dark:text-white transition-all placeholder:text-slate-400"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -100,7 +100,7 @@ const Orders: React.FC = () => {
             return (
               <div
                 key={order.id}
-                className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group"
+                className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-brand-600/40 transition-all"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -111,7 +111,7 @@ const Orders: React.FC = () => {
                       <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">
                         #{order.code || order.id.substring(0, 8).toUpperCase()}
                       </p>
-                      <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 leading-tight uppercase truncate w-40">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight uppercase truncate w-40">
                         {order.clients?.name || 'Cliente Avulso'}
                       </h4>
                     </div>
@@ -125,16 +125,16 @@ const Orders: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-6 pt-4 border-t border-slate-50 dark:border-slate-800">
+                <div className="grid grid-cols-2 gap-4 mb-6 pt-4 border-t border-slate-100 dark:border-slate-800">
                   <div className="space-y-1">
                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Venda</p>
-                    <p className="text-lg font-black text-slate-900 dark:text-white">
+                    <p className="text-lg font-black text-brand-600 tracking-tighter">
                       {formatCurrency(order.total_amount)}
                     </p>
                   </div>
                   <div className="space-y-1 text-right">
                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Data</p>
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase font-mono">
                       {formatDate(order.created_at)}
                     </p>
                   </div>
@@ -147,25 +147,25 @@ const Orders: React.FC = () => {
                     }}
                     disabled={isCancelled}
                     title={isCancelled ? 'Venda cancelada — recibo indisponível' : 'Imprimir recibo'}
-                    className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors ${
+                    className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${
                       isCancelled
-                        ? 'bg-slate-100 dark:bg-slate-800/60 text-slate-400 cursor-not-allowed opacity-60'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100'
+                        ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 cursor-not-allowed opacity-60'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-brand-600 hover:text-white'
                     }`}
                     type="button"
                   >
                     <Printer size={16} />
-                    <span className="text-[9px] font-black uppercase">
+                    <span className="text-[9px] font-black uppercase tracking-widest">
                       {isCancelled ? 'Recibo (Cancelada)' : 'Recibo'}
                     </span>
                   </button>
 
                   <button
                     onClick={() => setSelectedOrder(order)}
-                    className="flex-1 py-3 bg-slate-50 dark:bg-slate-800 text-slate-500 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-100 transition-colors"
+                    className="flex-1 py-3 bg-slate-50 dark:bg-slate-800 text-slate-500 rounded-xl flex items-center justify-center gap-2 hover:bg-brand-600 hover:text-white transition-all"
                     type="button"
                   >
-                    <MoreHorizontal size={16} /> <span className="text-[9px] font-black uppercase">Detalhes</span>
+                    <MoreHorizontal size={16} /> <span className="text-[9px] font-black uppercase tracking-widest">Detalhes</span>
                   </button>
                 </div>
               </div>
@@ -201,16 +201,16 @@ const getStatusStyle = (status: OrderStatus) => {
   const s = String(status || '').toUpperCase();
 
   if (s === 'CANCELLED') {
-    return 'text-rose-600 bg-rose-50 border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20';
+    return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
   }
 
   switch (status) {
     case OrderStatus.COMPLETED:
-      return 'text-emerald-500 bg-emerald-50 border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20';
+      return 'text-emerald-600 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/20';
     case OrderStatus.DRAFT:
-      return 'text-slate-400 bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700';
+      return 'text-slate-500 bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700';
     default:
-      return 'text-amber-500 bg-amber-50 border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20';
+      return 'text-brand-600 bg-brand-50 border-brand-100 dark:text-brand-400 dark:bg-brand-500/10 dark:border-brand-500/20';
   }
 };
 
@@ -587,50 +587,50 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-slate-900 w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-        <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+      <div className="relative bg-white dark:bg-slate-900 w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-              <ShoppingCart size={20} />
+            <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-600/20">
+              <ShoppingCart size={20} strokeWidth={3} />
             </div>
             <div>
-              <h3 className="text-xl font-black uppercase tracking-tight">Nova Venda (PDV)</h3>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Nova Venda (PDV)</h3>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">
                 Carrinho • Desconto • Pagamento
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400">
             <X size={20} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-8 custom-scrollbar">
           {/* ESQUERDA */}
           <div className="space-y-6">
             {error && (
-              <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 p-4 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold">
+              <div className="bg-rose-600/10 border border-rose-600/20 p-4 rounded-2xl flex items-center gap-3 text-rose-500 text-sm font-bold">
                 <AlertCircle size={18} /> {error}
               </div>
             )}
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">
                   Selecionar Cliente
                 </label>
 
                 <button
                   onClick={() => setIsNewClientOpen((v) => !v)}
-                  className="text-[10px] font-black uppercase tracking-widest text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                  className="text-[10px] font-black uppercase tracking-widest text-brand-600 hover:opacity-80 flex items-center gap-1 transition-all"
                   type="button"
                 >
-                  <Plus size={14} /> Novo Cliente
+                  <Plus size={14} strokeWidth={3} /> Novo Cliente
                 </button>
               </div>
 
               <select
-                className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-bold focus:ring-2 focus:ring-brand-500/20 outline-none"
+                className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-600/20 outline-none appearance-none"
                 value={selectedClientId || ''}
                 onChange={(e) => setSelectedClientId(e.target.value || null)}
               >
@@ -643,41 +643,41 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
               </select>
 
               {isNewClientOpen && (
-                <div className="mt-3 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div className="mt-3 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 ml-1">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1 ml-1">
                         Nome *
                       </label>
                       <input
                         value={newClientName}
                         onChange={(e) => setNewClientName(e.target.value)}
-                        className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-500/20"
+                        className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-600/20"
                         placeholder="Ex: João Silva"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 ml-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1 ml-1">
                           CPF/CNPJ (opcional)
                         </label>
                         <input
                           value={newClientDoc}
                           onChange={(e) => setNewClientDoc(e.target.value)}
-                          className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-500/20"
+                          className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-600/20"
                           placeholder="Somente números"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 ml-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1 ml-1">
                           Telefone (opcional)
                         </label>
                         <input
                           value={newClientPhone}
                           onChange={(e) => setNewClientPhone(e.target.value)}
-                          className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-500/20"
+                          className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-600/20"
                           placeholder="(00) 00000-0000"
                         />
                       </div>
@@ -686,7 +686,7 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                     <button
                       onClick={handleCreateClient}
                       disabled={isCreatingClient}
-                      className="w-full py-3 bg-brand-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-brand-600/20 hover:bg-brand-700 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-brand-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-brand-600/20 hover:bg-brand-700 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 transition-all"
                       type="button"
                     >
                       {isCreatingClient ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
@@ -698,7 +698,7 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
             </div>
 
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 ml-1">
                 Catálogo de Produtos
               </label>
               <div className="grid grid-cols-1 gap-2 max-h-[48vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -712,18 +712,18 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                       onClick={() => addToCart(p)}
                       className={`flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${
                         (p as any).stock <= 0
-                          ? 'opacity-50 grayscale cursor-not-allowed border-transparent'
-                          : 'bg-slate-50 dark:bg-slate-800/50 border-transparent hover:border-brand-500/50 hover:bg-white dark:hover:bg-slate-800'
+                          ? 'opacity-30 grayscale cursor-not-allowed border-transparent'
+                          : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-brand-600/40 hover:bg-brand-50 dark:hover:bg-brand-500/10'
                       }`}
                     >
                       <div className="min-w-0">
-                        <p className="text-xs font-black uppercase tracking-tight truncate">{p.name}</p>
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-xs font-bold uppercase tracking-tight truncate text-slate-900 dark:text-white">{p.name}</p>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
                           Estoque: {(p as any).stock} un
                           {rec > 0 ? <span className="ml-2 text-emerald-600 font-black">• Rec: {rec}%</span> : null}
                         </p>
                       </div>
-                      <span className="text-sm font-black text-brand-600">{formatCurrency(p.price)}</span>
+                      <span className="text-sm font-black text-brand-600 tracking-tighter">{formatCurrency(p.price)}</span>
                     </button>
                   );
                 })}
@@ -732,9 +732,9 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
           </div>
 
           {/* DIREITA */}
-          <div className="bg-slate-900 dark:bg-slate-950 text-white p-8 rounded-[2rem] flex flex-col shadow-xl">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-8 rounded-[2rem] flex flex-col shadow-2xl relative">
             <div className="flex items-center justify-between mb-6">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Venda Premium</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-600">Venda Premium</h4>
 
               <div className="flex gap-2">
                 <button
@@ -742,8 +742,8 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                   onClick={() => setRightTab('CART')}
                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
                     rightTab === 'CART'
-                      ? 'bg-white text-slate-900 border-white'
-                      : 'bg-slate-800/40 text-slate-300 border-slate-700/40 hover:bg-slate-800/70'
+                      ? 'bg-brand-600 text-white border-brand-600 shadow-lg shadow-brand-600/20'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
                 >
                   Carrinho
@@ -753,8 +753,8 @@ const OrderModal: React.FC<{ companyId: string; onClose: () => void; onRefresh: 
                   onClick={() => setRightTab('DISCOUNT')}
                   className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
                     rightTab === 'DISCOUNT'
-                      ? 'bg-emerald-500 text-slate-900 border-emerald-500'
-                      : 'bg-slate-800/40 text-slate-300 border-slate-700/40 hover:bg-slate-800/70'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
                 >
                   Desconto
